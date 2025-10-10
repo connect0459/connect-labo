@@ -1,26 +1,3 @@
-@import "tailwindcss";
-
-@theme {
-	/* カスタムフォント */
-	--font-family-atkinson: "Atkinson", sans-serif;
-}
-
-/* フォントフェイス */
-@font-face {
-	font-family: "Atkinson";
-	src: url("/fonts/atkinson-regular.woff") format("woff");
-	font-weight: 400;
-	font-style: normal;
-	font-display: swap;
-}
-@font-face {
-	font-family: "Atkinson";
-	src: url("/fonts/atkinson-bold.woff") format("woff");
-	font-weight: 700;
-	font-style: normal;
-	font-display: swap;
-}
-
 /* Markdown用のproseスタイル */
 .prose {
 	color: #374151;
@@ -103,27 +80,4 @@
 	font-style: italic;
 	color: #6b7280;
 	margin: 1.5em 0;
-}
-
-/* スクリーンリーダー用 */
-.sr-only {
-	border: 0;
-	padding: 0;
-	margin: 0;
-	position: absolute !important;
-	height: 1px;
-	width: 1px;
-	overflow: hidden;
-	clip: rect(1px 1px 1px 1px);
-	clip: rect(1px, 1px, 1px, 1px);
-	clip-path: inset(50%);
-	white-space: nowrap;
-}
-
-/* ユーティリティクラス */
-.line-clamp-2 {
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
 }

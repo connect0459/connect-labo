@@ -1,0 +1,54 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../../consts';
+
+const articles = (await getCollection('articles'))
+	.filter((article) => article.data.published)
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<!doctype html>
+<html lang="ja">
+	<head>
+		<BaseHead title={`Articles - ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+	</head>
+	<body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
+		<Header />
+		<main class="max-w-4xl mx-auto px-4 py-12">
+			<h1 class="text-4xl font-bold mb-8">Articles</h1>
+
+			<div class="space-y-6">
+				{articles.map((article) => (
+					<article class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+						<a href={`/articles/${article.id}`} class="block">
+							<div class="flex items-start gap-3">
+								{article.data.emoji && (
+									<span class="text-3xl">{article.data.emoji}</span>
+								)}
+								<div class="flex-1">
+									<h2 class="text-xl font-bold mb-2 text-gray-900 hover:text-blue-600">
+										{article.data.title}
+									</h2>
+									<div class="flex flex-wrap gap-2 mb-2">
+										{article.data.topics.map((topic) => (
+											<span class="px-2 py-1 bg-gray-100 text-gray-700 text-sm rounded">
+												{topic}
+											</span>
+										))}
+									</div>
+									<time class="text-sm text-gray-500">
+										{article.data.pubDate.toLocaleDateString('ja-JP')}
+									</time>
+								</div>
+							</div>
+						</a>
+					</article>
+				))}
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>

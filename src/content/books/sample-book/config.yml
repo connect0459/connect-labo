@@ -1,0 +1,18 @@
+title: "Astro入門ガイド"
+summary: "Astroの基礎から応用まで、実践的に学べる入門書です。"
+topics:
+  - Astro
+  - TypeScript
+  - Web開発
+published: true
+price: 0
+chapters:
+  - title: "Astroとは"
+    slug: "chapter1"
+    free: true
+  - title: "プロジェクトのセットアップ"
+    slug: "chapter2"
+    free: true
+  - title: "コンポーネントの作成"
+    slug: "chapter3"
+    free: true

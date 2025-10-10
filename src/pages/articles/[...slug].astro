@@ -1,0 +1,76 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export async function getStaticPaths() {
+	const articles = await getCollection('articles');
+	return articles.map((article) => ({
+		params: { slug: article.id },
+		props: { article },
+	}));
+}
+
+type Props = {
+	article: CollectionEntry<'articles'>;
+};
+
+const { article } = Astro.props;
+const { Content } = await render(article);
+---
+
+<!doctype html>
+<html lang="ja">
+	<head>
+		<BaseHead title={article.data.title} description={article.data.title} />
+	</head>
+	<body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
+		<Header />
+		<main class="max-w-3xl mx-auto px-4 py-12">
+			<article>
+				{/* ヘッダー */}
+				<header class="mb-8 pb-8 border-b border-gray-200">
+					<div class="flex items-center gap-3 mb-4">
+						{article.data.emoji && (
+							<span class="text-5xl">{article.data.emoji}</span>
+						)}
+						<h1 class="text-4xl font-bold text-gray-900">
+							{article.data.title}
+						</h1>
+					</div>
+
+					{/* メタ情報 */}
+					<div class="flex flex-wrap gap-4 text-sm text-gray-600">
+						<time>
+							{article.data.pubDate.toLocaleDateString('ja-JP')}
+						</time>
+						{article.data.updatedDate && (
+							<span>
+								更新: {article.data.updatedDate.toLocaleDateString('ja-JP')}
+							</span>
+						)}
+					</div>
+
+					{/* タグ */}
+					{article.data.topics.length > 0 && (
+						<div class="flex flex-wrap gap-2 mt-4">
+							{article.data.topics.map((topic) => (
+								<span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+									{topic}
+								</span>
+							))}
+						</div>
+					)}
+				</header>
+
+				{/* 本文 */}
+				<div class="prose prose-lg max-w-none">
+					<Content />
+				</div>
+			</article>
+		</main>
+		<Footer />
+	</body>
+</html>
