@@ -62,6 +62,10 @@ impl<'a> EthernetFrame<'a> {
             _ => EtherType::Unknown(value),
         }
     }
+
+    pub fn payload(&self) -> &[u8] {
+        &self.data[14..]
+    }
 }
 
 #[cfg(test)]
@@ -136,5 +140,14 @@ mod tests {
 
         let frame = EthernetFrame::new(&data).unwrap();
         assert_eq!(frame.ether_type(), EtherType::Arp);
+    }
+
+    #[test]
+    fn ペイロードを取得できる() {
+        let mut data = vec![0u8; 20];
+        data[14..20].copy_from_slice(b"Hello!");
+
+        let frame = EthernetFrame::new(&data).unwrap();
+        assert_eq!(frame.payload(), b"Hello!");
     }
 }
