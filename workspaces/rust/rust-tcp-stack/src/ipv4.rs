@@ -164,4 +164,42 @@ mod tests {
         // 正しいチェックサム値を検証
         assert_ne!(checksum, 0);
     }
+
+    #[test]
+    fn 正しいチェックサムを持つパケットを検証できる() {
+        // チェックサムフィールドを0で初期化したヘッダーを作成
+        let mut data = vec![
+            0x45, 0x00, 0x00, 0x28, // Version, IHL, ToS, Total Length
+            0x00, 0x00, 0x00, 0x00, // Identification, Flags, Fragment Offset
+            0x40, 0x06, 0x00, 0x00, // TTL, Protocol, Checksum (0で初期化)
+            0xc0, 0xa8, 0x01, 0x01, // Source IP
+            0xc0, 0xa8, 0x01, 0x02, // Destination IP
+        ];
+
+        // チェックサムを計算
+        let checksum = calculate_ipv4_checksum(&data);
+
+        // チェックサムフィールドに計算結果を埋め込む（10, 11バイト目）
+        data[10] = (checksum >> 8) as u8;
+        data[11] = (checksum & 0xff) as u8;
+
+        // パケットを作成して検証
+        let packet = Ipv4Packet::new(&data).unwrap();
+        assert!(packet.verify_checksum());
+    }
+
+    #[test]
+    fn 不正なチェックサムを持つパケットを検証できる() {
+        let data = vec![
+            0x45, 0x00, 0x00, 0x28, // Version, IHL, ToS, Total Length
+            0x00, 0x00, 0x00, 0x00, // Identification, Flags, Fragment Offset
+            0x40, 0x06, 0xff, 0xff, // TTL, Protocol, Checksum (不正な値)
+            0xc0, 0xa8, 0x01, 0x01, // Source IP
+            0xc0, 0xa8, 0x01, 0x02, // Destination IP
+        ];
+
+        // パケットを作成して検証
+        let packet = Ipv4Packet::new(&data).unwrap();
+        assert!(!packet.verify_checksum());
+    }
 }
