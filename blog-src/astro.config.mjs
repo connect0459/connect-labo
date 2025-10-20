@@ -7,7 +7,9 @@ import { defineConfig } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://example.com',
+	site: 'https://connect0459.github.io',
+	// GitHub Pagesのプロジェクトサイト用のベースパス
+	base: '/connect-labo',
 	integrations: [mdx(), sitemap()],
 	vite: {
 		plugins: [tailwindcss()],
