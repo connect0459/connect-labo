@@ -363,7 +363,9 @@ impl<'a> Ipv4Packet<'a> {
 
 チェックサムは、ヘッダーの整合性を確認するための重要な仕組みです。
 
-### Step 1: テストを書く（Red）
+### Step 1: 関数のテストを書く（Red）
+
+まず、`calculate_ipv4_checksum`関数が正しくチェックサムを計算できることをテストします。この関数は外部からも使用される可能性があるため、独立したユニットテストを作成します。
 
 ```rust
 #[test]
@@ -410,7 +412,9 @@ pub fn calculate_ipv4_checksum(header: &[u8]) -> u16 {
 
 チェックサム計算には3つの重要なステップがあります。まず、ヘッダーを16ビットワード単位で加算します。次に、キャリーの折り返しを行います。これは16ビットを超えた部分を下位に加算する処理です。最後に、1の補数を取ります。これはビット反転（`!`演算子）で実現できます。
 
-### チェックサム検証
+### チェックサム検証の実装
+
+次に、`Ipv4Packet`のメソッドとしてチェックサムを検証する機能を実装します。
 
 ```rust
 impl<'a> Ipv4Packet<'a> {
@@ -421,6 +425,65 @@ impl<'a> Ipv4Packet<'a> {
     }
 }
 ```
+
+### チェックサム検証のテスト
+
+`verify_checksum`メソッドの動作を確認するため、2つのテストケースを追加します。
+
+#### 正しいチェックサムの検証
+
+```rust
+#[test]
+fn 正しいチェックサムを持つパケットを検証できる() {
+    // チェックサムフィールドを0で初期化したヘッダーを作成
+    let mut data = vec![
+        0x45, 0x00, 0x00, 0x28, // Version, IHL, ToS, Total Length
+        0x00, 0x00, 0x00, 0x00, // Identification, Flags, Fragment Offset
+        0x40, 0x06, 0x00, 0x00, // TTL, Protocol, Checksum (0で初期化)
+        0xc0, 0xa8, 0x01, 0x01, // Source IP
+        0xc0, 0xa8, 0x01, 0x02, // Destination IP
+    ];
+
+    // チェックサムを計算
+    let checksum = calculate_ipv4_checksum(&data);
+
+    // チェックサムフィールドに計算結果を埋め込む（10, 11バイト目）
+    data[10] = (checksum >> 8) as u8;
+    data[11] = (checksum & 0xff) as u8;
+
+    // パケットを作成して検証
+    let packet = Ipv4Packet::new(&data).unwrap();
+    assert!(packet.verify_checksum());
+}
+```
+
+このテストでは、正しいチェックサム値を持つパケットを作成し、`verify_checksum()`が`true`を返すことを確認します。重要なポイントは、チェックサムフィールドを含めて再計算すると結果が`0`になることです。
+
+#### 不正なチェックサムの検証
+
+```rust
+#[test]
+fn 不正なチェックサムを持つパケットを検証できる() {
+    let data = vec![
+        0x45, 0x00, 0x00, 0x28, // Version, IHL, ToS, Total Length
+        0x00, 0x00, 0x00, 0x00, // Identification, Flags, Fragment Offset
+        0x40, 0x06, 0xff, 0xff, // TTL, Protocol, Checksum (不正な値)
+        0xc0, 0xa8, 0x01, 0x01, // Source IP
+        0xc0, 0xa8, 0x01, 0x02, // Destination IP
+    ];
+
+    // パケットを作成して検証
+    let packet = Ipv4Packet::new(&data).unwrap();
+    assert!(!packet.verify_checksum());
+}
+```
+
+このテストでは、不正なチェックサム値（`0xff, 0xff`）を持つパケットを作成し、`verify_checksum()`が`false`を返すことを確認します。
+
+### テストの役割分担
+
+- 関数のテスト（`チェックサムを計算できる`）: `calculate_ipv4_checksum`関数が独立して正しく動作することを検証
+- メソッドのテスト（`正しいチェックサムを持つパケットを検証できる`、`不正なチェックサムを持つパケットを検証できる`）: `Ipv4Packet`のメソッドとして統合された状態での動作を検証
 
 ---
 
