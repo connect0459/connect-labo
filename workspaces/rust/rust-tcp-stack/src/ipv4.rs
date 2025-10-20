@@ -18,6 +18,24 @@ impl<'a> Ipv4Packet<'a> {
 
         Some(Ipv4Packet { data })
     }
+
+    pub fn source(&self) -> Ipv4Addr {
+        Ipv4Addr::new(
+            self.data[12],
+            self.data[13],
+            self.data[14],
+            self.data[15],
+        )
+    }
+
+    pub fn destination(&self) -> Ipv4Addr {
+        Ipv4Addr::new(
+            self.data[16],
+            self.data[17],
+            self.data[18],
+            self.data[19],
+        )
+    }
 }
 
 #[cfg(test)]
@@ -35,5 +53,25 @@ mod tests {
         let mut data = [0u8; 20];
         data[0] = 0x60; // バージョン6(IPv6)
         assert!(Ipv4Packet::new(&data).is_none());
+    }
+
+    #[test]
+    fn 送信元ipアドレスを取得できる() {
+        let mut data = [0u8; 20];
+        data[0] = 0x45; // バージョン4, IHL=5
+        data[12..16].copy_from_slice(&[192, 168, 1, 1]);
+
+        let packet = Ipv4Packet::new(&data).unwrap();
+        assert_eq!(packet.source(), Ipv4Addr::new(192, 168, 1, 1));
+    }
+
+    #[test]
+    fn 宛先ipアドレスを取得できる() {
+        let mut data = [0u8; 20];
+        data[0] = 0x45; // バージョン4, IHL=5
+        data[16..20].copy_from_slice(&[10, 0, 0, 1]);
+
+        let packet = Ipv4Packet::new(&data).unwrap();
+        assert_eq!(packet.destination(), Ipv4Addr::new(10, 0, 0, 1));
     }
 }
