@@ -21,6 +21,10 @@ Ethernetフレームは、ネットワークインターフェース層で使用
   誰に送る？        誰から？      何のプロトコル？   実際のデータ  エラー検出
 ```
 
+![Ethernetのフレームフォーマット](./images/ethernet-frame.png)
+
+参考:<https://www.infraexpert.com/study/ethernet4.html>
+
 ### フィールドの説明
 
 1. 宛先MACアドレス（Destination MAC Address）: 6バイト

@@ -34,6 +34,18 @@ impl<'a> EthernetFrame<'a> {
         }
         Some(EthernetFrame { data })
     }
+
+    pub fn destination(&self) -> MacAddress {
+        let mut bytes = [0u8; 6];
+        bytes.copy_from_slice(&self.data[0..6]);
+        MacAddress(bytes)
+    }
+
+    pub fn source(&self) -> MacAddress {
+        let mut bytes = [0u8; 6];
+        bytes.copy_from_slice($self.data[6..12]);
+        MacAddress(bytes)
+    }
 }
 
 #[cfg(test)]
@@ -62,5 +74,31 @@ mod tests {
     fn ethernetフレームは14バイト未満を拒否する() {
         let short_data = [0u8; 13];
         assert!(EthernetFrame::new(&short_data).is_none());
+    }
+
+    #[test]
+    fn ethernetフレームは14バイト以上を受け入れる() {
+        let valid_data = [0u8; 14];
+        assert!(EthernetFrame::new(&valid_data).is_some());
+    }
+
+    #[test]
+    fn 宛先macアドレスを取得できる() {
+        let mut data = [0u8; 14];
+        data[0..6].copy_from_slice(&[0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
+
+        let frame = EthernetFrame::new(&data).unwrap();
+        let expected = MacAddress::new([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
+        assert_eq!(frame.destination(), expected);
+    }
+
+    #[test]
+    fn 送信元macアドレスを取得できる() {
+        let mut data = [0u8; 14];
+        data[6..12].copy_from_slice(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66]);
+
+        let frame = EthernetFrame::new(&data).unwrap();
+        let expected = MacAddress::new([0x11, 0x22, 0x33, 0x44, 0x55, 0x66]);
+        assert_eq!(frame.source(), expected);
     }
 }
