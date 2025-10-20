@@ -28,21 +28,11 @@ impl<'a> Ipv4Packet<'a> {
     }
 
     pub fn source(&self) -> Ipv4Addr {
-        Ipv4Addr::new(
-            self.data[12],
-            self.data[13],
-            self.data[14],
-            self.data[15],
-        )
+        Ipv4Addr::new(self.data[12], self.data[13], self.data[14], self.data[15])
     }
 
     pub fn destination(&self) -> Ipv4Addr {
-        Ipv4Addr::new(
-            self.data[16],
-            self.data[17],
-            self.data[18],
-            self.data[19],
-        )
+        Ipv4Addr::new(self.data[16], self.data[17], self.data[18], self.data[19])
     }
 
     pub fn protocol(&self) -> IpProtocol {
@@ -52,6 +42,16 @@ impl<'a> Ipv4Packet<'a> {
             17 => IpProtocol::Udp,
             n => IpProtocol::Unknown(n),
         }
+    }
+
+    pub fn header_length(&self) -> usize {
+        let ihl = self.data[0] & 0x0f; // 下位4ビット
+        (ihl as usize) * 4
+    }
+
+    pub fn payload(&self) -> &[u8] {
+        let header_len = self.header_length();
+        &self.data[header_len..]
     }
 }
 
@@ -100,5 +100,25 @@ mod tests {
 
         let packet = Ipv4Packet::new(&data).unwrap();
         assert_eq!(packet.protocol(), IpProtocol::Tcp);
+    }
+
+    #[test]
+    fn ヘッダー長を取得できる() {
+        let mut data = [0u8; 20];
+        data[0] = 0x45; // バージョン4, IHL=5
+
+        let packet = Ipv4Packet::new(&data).unwrap();
+        assert_eq!(packet.header_length(), 20);
+    }
+
+    #[test]
+    fn ペイロードを取得できる() {
+        let mut data = vec![0u8; 30];
+        data[0] = 0x45; // IHL=5 → ヘッダー20バイト
+
+        data[20..30].copy_from_slice(b"HelloWorld");
+
+        let packet = Ipv4Packet::new(&data).unwrap();
+        assert_eq!(packet.payload(), b"HelloWorld");
     }
 }
