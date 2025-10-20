@@ -29,10 +29,23 @@
 
 ## 環境セットアップ
 
+ライブラリプロジェクトとして作成する場合:
+
 ```bash
 cargo new rust-tcp-stack --lib
 cd rust-tcp-stack
 ```
+
+バイナリプロジェクトとして作成する場合:
+
+```bash
+cargo new rust-tcp-stack
+cd rust-tcp-stack
+```
+
+**注意**: ライブラリプロジェクトの場合は`src/lib.rs`、バイナリプロジェクトの場合は`src/main.rs`がエントリーポイントになります。
+
+新しいモジュール（`ethernet.rs`など）を追加したら、必ずエントリーポイントに`mod モジュール名;`を追加する必要があります。
 
 Cargo.toml:
 
@@ -79,10 +92,22 @@ mod tests {
 }
 ```
 
-src/lib.rs:
+**重要**: モジュールを認識させるために、プロジェクトのエントリーポイントでモジュール宣言が必要です。
+
+- ライブラリプロジェクト（`cargo new --lib`）の場合、src/lib.rs:
 
 ```rust
 pub mod ethernet;
+```
+
+- バイナリプロジェクト（`cargo new`）の場合、src/main.rs:
+
+```rust
+mod ethernet;
+
+fn main() {
+    println!("Hello, world!");
+}
 ```
 
 #### Step 2: テスト実行（Red確認）
@@ -783,11 +808,24 @@ mod tests {
 }
 ```
 
-src/lib.rsに追加:
+**重要**: `ipv4`モジュールも同様に宣言が必要です。
+
+- ライブラリプロジェクトの場合、src/lib.rs:
 
 ```rust
 pub mod ethernet;
 pub mod ipv4;
+```
+
+- バイナリプロジェクトの場合、src/main.rs:
+
+```rust
+mod ethernet;
+mod ipv4;
+
+fn main() {
+    println!("Hello, world!");
+}
 ```
 
 ### あなたの番：Iteration 10-19
@@ -826,6 +864,28 @@ TCPパケットパーサー
 ```
 
 src/tcp.rsを作成して、同じようにTDDで進めてください。
+
+**重要**: `tcp`モジュールも忘れずに宣言してください。
+
+- ライブラリプロジェクトの場合、src/lib.rs:
+
+```rust
+pub mod ethernet;
+pub mod ipv4;
+pub mod tcp;
+```
+
+- バイナリプロジェクトの場合、src/main.rs:
+
+```rust
+mod ethernet;
+mod ipv4;
+mod tcp;
+
+fn main() {
+    println!("Hello, world!");
+}
+```
 
 ---
 
