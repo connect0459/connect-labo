@@ -26,6 +26,8 @@ impl fmt::Display for MacAddress {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EtherType {
     Ipv4,
+    Arp,
+    Unknown(u16),
 }
 
 pub struct EthernetFrame<'a> {
@@ -53,7 +55,12 @@ impl<'a> EthernetFrame<'a> {
     }
 
     pub fn ether_type(&self) -> EtherType {
-        EtherType::Ipv4 // 仮実装
+        let value = u16::from_be_bytes([self.data[12], self.data[13]]);
+        match value {
+            0x0800 => EtherType::Ipv4,
+            0x0806 => EtherType::Arp,
+            _ => EtherType::Unknown(value),
+        }
     }
 }
 
@@ -118,7 +125,16 @@ mod tests {
         data[13] = 0x00;
 
         let frame = EthernetFrame::new(&data).unwrap();
-        // まだEtherType型がないのでコンパイルエラーになる
         assert_eq!(frame.ether_type(), EtherType::Ipv4);
+    }
+
+    #[test]
+    fn ethertypeがarpの場合() {
+        let mut data = [0u8; 14];
+        data[12] = 0x08;
+        data[13] = 0x06;
+
+        let frame = EthernetFrame::new(&data).unwrap();
+        assert_eq!(frame.ether_type(), EtherType::Arp);
     }
 }
