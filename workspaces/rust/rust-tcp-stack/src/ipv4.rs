@@ -8,6 +8,28 @@ pub enum IpProtocol {
     Unknown(u8),
 }
 
+pub fn calculate_ipv4_checksum(header: &[u8]) -> u16 {
+    let mut sum: u32 = 0;
+
+    // 16ビットワードごとに加算
+    for i in (0..header.len()).step_by(2) {
+        let word = if i + 1 < header.len() {
+            u16::from_be_bytes([header[i], header[i + 1]]) as u32
+        } else {
+            (header[i] as u32) << 8
+        };
+        sum += word;
+    }
+
+    // キャリーを折り返す
+    while (sum >> 16) != 0 {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+
+    // 1の補数を取る
+    !(sum as u16)
+}
+
 pub struct Ipv4Packet<'a> {
     data: &'a [u8],
 }
@@ -52,6 +74,12 @@ impl<'a> Ipv4Packet<'a> {
     pub fn payload(&self) -> &[u8] {
         let header_len = self.header_length();
         &self.data[header_len..]
+    }
+
+    pub fn verify_checksum(&self) -> bool {
+        let header_len = self.header_length();
+        let checksum = calculate_ipv4_checksum(&self.data[..header_len]);
+        checksum == 0 // チェックサム含めて計算すると0になる
     }
 }
 
@@ -120,5 +148,20 @@ mod tests {
 
         let packet = Ipv4Packet::new(&data).unwrap();
         assert_eq!(packet.payload(), b"HelloWorld");
+    }
+
+    #[test]
+    fn チェックサムを計算できる() {
+        let data = vec![
+            0x45, 0x00, 0x00, 0x28, // Version, IHL, ToS, Total Length
+            0x00, 0x00, 0x00, 0x00, // Identification, Flags, Fragment Offset
+            0x40, 0x06, 0x00, 0x00, // TTL, Protocol, Checksum (0で初期化)
+            0xc0, 0xa8, 0x01, 0x01, // Source IP
+            0xc0, 0xa8, 0x01, 0x02, // Destination IP
+        ];
+
+        let checksum = calculate_ipv4_checksum(&data);
+        // 正しいチェックサム値を検証
+        assert_ne!(checksum, 0);
     }
 }
