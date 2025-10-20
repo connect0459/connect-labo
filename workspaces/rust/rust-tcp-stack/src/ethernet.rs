@@ -1,16 +1,15 @@
 use std::fmt;
 
-pub struct MacAddress {
-    bytes: [u8; 6],
-}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MacAddress(pub [u8; 6]);
 
 impl MacAddress {
     pub fn new(bytes: [u8; 6]) -> Self {
-        MacAddress { bytes }
+        MacAddress(bytes)
     }
 
-    pub fn bytes(&self) -> [u8; 6] {
-        self.bytes
+    pub fn broadcast() -> Self {
+        MacAddress([0xff; 6])
     }
 }
 
@@ -19,12 +18,7 @@ impl fmt::Display for MacAddress {
         write!(
             f,
             "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            self.bytes[0],
-            self.bytes[1],
-            self.bytes[2],
-            self.bytes[3],
-            self.bytes[4],
-            self.bytes[5]
+            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5]
         )
     }
 }
@@ -36,7 +30,7 @@ mod tests {
     #[test]
     fn macアドレスを作成できる() {
         let mac = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
-        assert_eq!(mac.bytes(), [0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+        assert_eq!(mac.0, [0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
     }
 
     #[test]
@@ -48,6 +42,6 @@ mod tests {
     #[test]
     fn ブロードキャストアドレスを作成できる() {
         let broadcast = MacAddress::broadcast();
-        assert_eq!(broadcast.bytes(), [0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+        assert_eq!(broadcast.0, [0xff; 6]);
     }
 }
