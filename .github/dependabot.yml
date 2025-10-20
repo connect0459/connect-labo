@@ -3,18 +3,11 @@
 # https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
 
 version: 2
-registries:
-  npm-github:
-    type: npm-registry
-    url: https://npm.pkg.github.com
-    token: ${{secrets.NODE_AUTH_TOKEN}}
 
 updates:
   # npm依存関係の更新 (TypeScript/Vite)
   - package-ecosystem: "npm"
-    directory: "/"
-    registries:
-      - npm-github
+    directory: "/blog-src"
     schedule:
       interval: "weekly"
       day: "saturday"
