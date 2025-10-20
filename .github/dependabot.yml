@@ -1,0 +1,48 @@
+# Dependabot設定ファイル
+# 依存関係の自動更新PRを作成します
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+registries:
+  npm-github:
+    type: npm-registry
+    url: https://npm.pkg.github.com
+    token: ${{secrets.NODE_AUTH_TOKEN}}
+
+updates:
+  # npm依存関係の更新 (TypeScript/Vite)
+  - package-ecosystem: "npm"
+    directory: "/"
+    registries:
+      - npm-github
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 3
+    groups:
+      development:
+        dependency-type: "development"
+      production:
+        dependency-type: "production"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # GitHub Actions依存関係の更新
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore(actions)"
+      include: "scope"
