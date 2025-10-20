@@ -1,5 +1,13 @@
 use std::net::Ipv4Addr;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IpProtocol {
+    Icmp,
+    Tcp,
+    Udp,
+    Unknown(u8),
+}
+
 pub struct Ipv4Packet<'a> {
     data: &'a [u8],
 }
@@ -35,6 +43,15 @@ impl<'a> Ipv4Packet<'a> {
             self.data[18],
             self.data[19],
         )
+    }
+
+    pub fn protocol(&self) -> IpProtocol {
+        match self.data[9] {
+            1 => IpProtocol::Icmp,
+            6 => IpProtocol::Tcp,
+            17 => IpProtocol::Udp,
+            n => IpProtocol::Unknown(n),
+        }
     }
 }
 
@@ -73,5 +90,15 @@ mod tests {
 
         let packet = Ipv4Packet::new(&data).unwrap();
         assert_eq!(packet.destination(), Ipv4Addr::new(10, 0, 0, 1));
+    }
+
+    #[test]
+    fn プロトコルがtcpの場合() {
+        let mut data = [0u8; 20];
+        data[0] = 0x45;
+        data[9] = 6; // tcp
+
+        let packet = Ipv4Packet::new(&data).unwrap();
+        assert_eq!(packet.protocol(), IpProtocol::Tcp);
     }
 }
