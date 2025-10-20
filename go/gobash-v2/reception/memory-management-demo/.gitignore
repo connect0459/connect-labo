@@ -1,0 +1,32 @@
+# ビルド成果物
+**/main
+**/memory-demo
+
+# C言語
+c-example/*.o
+c-example/*.out
+
+# Go言語
+go-example/go.sum
+
+# Java言語
+java-example/*.class
+
+# Rust言語
+rust-example/target/
+rust-example/Cargo.lock
+
+# Docker
+compose.override.yml
+.env
+
+# OS関連
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

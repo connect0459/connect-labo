@@ -1,0 +1,32 @@
+services:
+  c-example:
+    build:
+      context: ./c-example
+      dockerfile: Dockerfile
+    container_name: memory-demo-c
+    stdin_open: true
+    tty: true
+
+  go-example:
+    build:
+      context: ./go-example
+      dockerfile: Dockerfile
+    container_name: memory-demo-go
+    stdin_open: true
+    tty: true
+
+  java-example:
+    build:
+      context: ./java-example
+      dockerfile: Dockerfile
+    container_name: memory-demo-java
+    stdin_open: true
+    tty: true
+
+  rust-example:
+    build:
+      context: ./rust-example
+      dockerfile: Dockerfile
+    container_name: memory-demo-rust
+    stdin_open: true
+    tty: true
