@@ -23,6 +23,19 @@ impl fmt::Display for MacAddress {
     }
 }
 
+pub struct EthernetFrame<'a> {
+    data: &'a [u8],
+}
+
+impl<'a> EthernetFrame<'a> {
+    pub fn new(data: &'a [u8]) -> Option<Self> {
+        if data.len() < 14 {
+            return None;
+        }
+        Some(EthernetFrame { data })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,5 +56,11 @@ mod tests {
     fn ブロードキャストアドレスを作成できる() {
         let broadcast = MacAddress::broadcast();
         assert_eq!(broadcast.0, [0xff; 6]);
+    }
+
+    #[test]
+    fn ethernetフレームは14バイト未満を拒否する() {
+        let short_data = [0u8; 13];
+        assert!(EthernetFrame::new(&short_data).is_none());
     }
 }
