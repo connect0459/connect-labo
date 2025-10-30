@@ -1,0 +1,50 @@
+# Pre-commit hooks configuration
+# https://pre-commit.com/
+
+repos:
+  # 基本的なファイル整形
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # トレイリングスペースを削除
+      - id: trailing-whitespace
+        files: ^blog-src/
+      # ファイル末尾に改行を追加
+      - id: end-of-file-fixer
+        files: ^blog-src/
+      # YAML構文チェック
+      - id: check-yaml
+        files: ^blog-src/
+        args: ["--unsafe"] # Astroのフロントマター対応
+      # JSON構文チェック
+      - id: check-json
+        files: ^blog-src/
+      # マージコンフリクトマーカーをチェック
+      - id: check-merge-conflict
+        files: ^blog-src/
+      # 大きなファイルの追加を防ぐ
+      - id: check-added-large-files
+        files: ^blog-src/
+        args: ["--maxkb=1000"]
+
+  # Prettier - コードフォーマット (local hook)
+  - repo: local
+    hooks:
+      - id: prettier-blog
+        name: prettier (blog-src)
+        entry: bash -c 'cd blog-src && npm run fmt.check'
+        language: system
+        files: ^blog-src/
+        types_or: [javascript, jsx, ts, tsx, json, markdown, yaml, css, scss, astro]
+        pass_filenames: false
+
+  # ESLint - 静的解析 (local hook)
+  - repo: local
+    hooks:
+      - id: eslint-blog
+        name: eslint (blog-src)
+        entry: bash -c 'cd blog-src && npm run lint'
+        language: system
+        files: ^blog-src/.*\.[jt]sx?$
+        types: [file]
+        pass_filenames: false
