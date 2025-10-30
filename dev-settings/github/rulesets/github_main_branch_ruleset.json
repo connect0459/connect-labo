@@ -1,0 +1,59 @@
+{
+  "name": "OSS Main Branch Protection",
+  "target": "branch",
+  "source_type": "Repository",
+  "source": "Repository",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "refs/heads/main",
+        "refs/heads/master"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion",
+      "parameters": {}
+    },
+    {
+      "type": "non_fast_forward",
+      "parameters": {}
+    },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": true,
+        "require_last_push_approval": false,
+        "required_approving_review_count": 1,
+        "required_review_thread_resolution": true
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "required_status_checks": [
+          {
+            "context": "continuous-integration",
+            "integration_id": null
+          },
+          {
+            "context": "security-scan",
+            "integration_id": null
+          }
+        ],
+        "strict_required_status_checks_policy": true
+      }
+    },
+    {
+      "type": "required_deployments",
+      "parameters": {
+        "required_deployment_environments": []
+      }
+    }
+  ],
+  "bypass_actors": []
+}

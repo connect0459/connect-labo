@@ -1,0 +1,191 @@
+{
+  // ==========================================
+  // 基本エディタ設定
+  // ==========================================
+  "diffEditor.ignoreTrimWhitespace": true,
+  "editor.detectIndentation": false,
+  "editor.stickyTabStops": true,
+  "editor.tabSize": 2,
+  "editor.unicodeHighlight.nonBasicASCII": false,
+  "editor.unicodeHighlight.ambiguousCharacters": false,
+  "files.associations": {
+    ".swiftformat": "plaintext"
+  },
+  "files.autoSave": "afterDelay",
+  "files.insertFinalNewline": true,
+  // ==========================================
+  // エクスプローラー設定
+  // ==========================================
+  "explorer.confirmDragAndDrop": false,
+  "explorer.confirmDelete": false,
+  // ==========================================
+  // ワークベンチ設定
+  // ==========================================
+  "workbench.startupEditor": "none",
+  "workbench.colorTheme": "Default Dark+",
+  "workbench.settings.applyToAllProfiles": [],
+  // ==========================================
+  // セキュリティ設定
+  // ==========================================
+  "security.workspace.trust.untrustedFiles": "open",
+  "security.allowedUNCHosts": [
+    "wsl.localhost"
+  ],
+  // ==========================================
+  // 言語別設定
+  // ==========================================
+  // Python
+  "[python]": {
+    "editor.formatOnType": true,
+    "editor.tabSize": 4,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit" // コード保存時にimport行を整理
+    }
+  },
+  "python.analysis.typeCheckingMode": "strict",
+  "python.languageServer": "Pylance",
+  // PHP
+  "[php]": {
+    "editor.tabSize": 4
+  },
+  // HTML
+  "[html]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "html.format.extraLiners": "",
+  // CSS/SCSS
+  "[css]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // JavaScript/TypeScript
+  "[javascript]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "typescript.preferences.preferTypeOnlyAutoImports": true,
+  // Kotlin
+  "[kotlin]": {
+    "editor.tabSize": 4
+  },
+  "kotlin.debugAdapter.enabled": false,
+  "kotlin.languageServer.enabled": false,
+  // Rust
+  "[rust]": {
+    "editor.tabSize": 4
+  },
+  // Swift
+  "[swift]": {
+    "editor.defaultFormatter": "sweetpad.sweetpad",
+    "editor.tabSize": 4
+  },
+  // JSON
+  "[json]": {
+    "editor.tabSize": 2,
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  // Markdown
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+  },
+  "[mdx]": {
+    "editor.defaultFormatter": "unifiedjs.vscode-mdx"
+  },
+  // YAML
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // その他のファイル形式
+  "[dockercompose]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // ==========================================
+  // Git設定
+  // ==========================================
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "git.ignoreRebaseWarning": true,
+  "git.openRepositoryInParentFolders": "never",
+  // ==========================================
+  // ターミナル設定
+  // ==========================================
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    },
+    "Command Prompt": {
+      "path": [
+        "${env:windir}\\Sysnative\\cmd.exe",
+        "${env:windir}\\System32\\cmd.exe"
+      ],
+      "args": [
+        "/k",
+        "chcp",
+        "65001"
+      ],
+      "icon": "terminal-cmd"
+    },
+    "Git Bash": {
+      "source": "Git Bash"
+    }
+  },
+  // ==========================================
+  // 開発環境・リモート設定
+  // ==========================================
+  "dev.containers.executeInWSL": true,
+  "remote.autoForwardPortsSource": "hybrid",
+  // ==========================================
+  // 拡張機能設定
+  // ==========================================
+  // Jupyter設定
+  "jupyter.askForKernelRestart": false,
+  "notebook.lineNumbers": "on",
+  // Live Server設定
+  "liveServer.settings.donotShowInfoMsg": true,
+  // Go設定
+  "go.toolsManagement.autoUpdate": true,
+  // GitHub Copilot設定
+  "github.copilot.nextEditSuggestions.enabled": true,
+  // Auto Time Stamp設定
+  "lpubsppop01.autoTimeStamp.filenamePattern": ".md*",
+  "lpubsppop01.autoTimeStamp.modifiedTimeStart": "^autoTimestamp:",
+  "lpubsppop01.autoTimeStamp.momentFormat": " YYYY-MM-DDTHH:mm:ss",
+  // Marp設定
+  "markdown.marp.html": "all",
+  // Markdown PDF設定
+  "markdown-pdf.includeDefaultStyles": false,
+  "markdown-pdf.styles": [
+    // "C:/Users/nakao/workspace/styles/github-markdown-5.6.1-custom.css"
+  ],
+  "markdown-pdf.mermaidServer": "https://unpkg.com/mermaid@10.4.0/dist/mermaid.min.js",
+  // Markdownlint設定
+  "markdownlint.config": {
+    "MD033": false, // Inline HTMLを許可
+    "MD034": false // Bare URLを許可
+  },
+  // ==========================================
+  // その他の設定
+  // ==========================================
+  "settingsSync.ignoredSettings": []
+}
