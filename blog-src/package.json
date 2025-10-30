@@ -1,21 +1,33 @@
 {
-  "name": "connect-labo",
+  "name": "connect-labo-blog",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "fmt": "prettier --write .",
+    "fmt.check": "prettier --check .",
+    "lint": "eslint .",
+    "lint.fix": "eslint . --fix",
+    "build.types": "astro check"
   },
   "devDependencies": {
+    "@astrojs/check": "0.9.5",
     "@astrojs/mdx": "4.3.7",
     "@astrojs/rss": "4.0.12",
     "@astrojs/sitemap": "3.6.0",
     "@tailwindcss/vite": "4.1.14",
     "astro": "5.14.3",
+    "eslint": "9.38.0",
+    "eslint-plugin-astro": "1.4.0",
     "marked": "16.4.0",
+    "prettier": "3.6.2",
+    "prettier-plugin-astro": "0.14.1",
     "sharp": "0.34.3",
-    "tailwindcss": "4.1.14"
+    "tailwindcss": "4.1.14",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.2"
   }
 }
