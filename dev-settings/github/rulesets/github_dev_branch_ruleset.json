@@ -1,5 +1,5 @@
 {
-  "name": "OSS Development Branch Protection",
+  "name": "Development Branch Protection",
   "target": "branch",
   "source_type": "Repository",
   "source": "Repository",
