@@ -1,69 +1,66 @@
 ---
-import { getCollection } from 'astro:content';
-import BaseHead from '../../components/BaseHead.astro';
-import Header from '../../components/Header.astro';
-import Footer from '../../components/Footer.astro';
-import { SITE_TITLE, SITE_DESCRIPTION } from '../../consts';
+import { getCollection } from "astro:content";
+import BaseHead from "../../components/BaseHead.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import { SITE_TITLE, SITE_DESCRIPTION } from "../../consts";
 
-const books = (await getCollection('books'))
-	.filter((book) => book.data.published);
+const books = (await getCollection("books")).filter((book) => book.data.published);
 ---
 
 <!doctype html>
 <html lang="ja">
-	<head>
-		<BaseHead title={`Books - ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
-	</head>
-	<body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
-		<Header />
-		<main class="max-w-6xl mx-auto px-4 py-12">
-			<h1 class="text-4xl font-bold mb-8">Books</h1>
+  <head>
+    <BaseHead title={`Books - ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+  </head>
+  <body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
+    <Header />
+    <main class="max-w-6xl mx-auto px-4 py-12">
+      <h1 class="text-4xl font-bold mb-8">Books</h1>
 
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{books.map((book) => {
-					// bookのIDからディレクトリ名を取得
-					const bookSlug = book.id.split('/')[0];
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {
+          books.map((book) => {
+            // bookのIDからディレクトリ名を取得
+            const bookSlug = book.id.split("/")[0];
 
-					return (
-						<article class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-							<a href={`/books/${bookSlug}`} class="block">
-								{/* カバー画像エリア */}
-								<div class="aspect-[3/4] bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-									<span class="text-white text-6xl font-bold">📚</span>
-								</div>
+            return (
+              <article class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                <a href={`/books/${bookSlug}`} class="block">
+                  {/* カバー画像エリア */}
+                  <div class="aspect-[3/4] bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                    <span class="text-white text-6xl font-bold">📚</span>
+                  </div>
 
-								{/* 本の情報 */}
-								<div class="p-4">
-									<h2 class="text-xl font-bold mb-2 text-gray-900">
-										{book.data.title}
-									</h2>
-									<p class="text-sm text-gray-600 mb-3 line-clamp-2">
-										{book.data.summary}
-									</p>
+                  {/* 本の情報 */}
+                  <div class="p-4">
+                    <h2 class="text-xl font-bold mb-2 text-gray-900">{book.data.title}</h2>
+                    <p class="text-sm text-gray-600 mb-3 line-clamp-2">{book.data.summary}</p>
 
-									{/* タグ */}
-									<div class="flex flex-wrap gap-2 mb-3">
-										{book.data.topics.slice(0, 3).map((topic) => (
-											<span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-												{topic}
-											</span>
-										))}
-									</div>
+                    {/* タグ */}
+                    <div class="flex flex-wrap gap-2 mb-3">
+                      {book.data.topics.slice(0, 3).map((topic) => (
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
 
-									{/* 章数と価格 */}
-									<div class="flex justify-between items-center text-sm text-gray-500">
-										<span>{book.data.chapters.length} 章</span>
-										<span class="font-bold text-gray-900">
-											{book.data.price === 0 ? '無料' : `¥${book.data.price}`}
-										</span>
-									</div>
-								</div>
-							</a>
-						</article>
-					);
-				})}
-			</div>
-		</main>
-		<Footer />
-	</body>
+                    {/* 章数と価格 */}
+                    <div class="flex justify-between items-center text-sm text-gray-500">
+                      <span>{book.data.chapters.length} 章</span>
+                      <span class="font-bold text-gray-900">
+                        {book.data.price === 0 ? "無料" : `¥${book.data.price}`}
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              </article>
+            );
+          })
+        }
+      </div>
+    </main>
+    <Footer />
+  </body>
 </html>

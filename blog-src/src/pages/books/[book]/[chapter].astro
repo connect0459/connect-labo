@@ -1,199 +1,200 @@
 ---
-import { getCollection } from 'astro:content';
-import type { CollectionEntry } from 'astro:content';
-import BaseHead from '../../../components/BaseHead.astro';
-import Header from '../../../components/Header.astro';
-import Footer from '../../../components/Footer.astro';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { getCollection } from "astro:content";
+import type { CollectionEntry } from "astro:content";
+import BaseHead from "../../../components/BaseHead.astro";
+import Header from "../../../components/Header.astro";
+import Footer from "../../../components/Footer.astro";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 export async function getStaticPaths() {
-	const books = await getCollection('books');
+  const books = await getCollection("books");
 
-	const paths = [];
-	for (const book of books) {
-		// book.idは "sample-book/config.yml" のような形式なので、ディレクトリ名を抽出
-		const bookSlug = book.id.split('/')[0];
+  const paths = [];
+  for (const book of books) {
+    // book.idは "sample-book/config.yml" のような形式なので、ディレクトリ名を抽出
+    const bookSlug = book.id.split("/")[0];
 
-		for (const chapter of book.data.chapters) {
-			paths.push({
-				params: {
-					book: bookSlug,
-					chapter: chapter.slug,
-				},
-				props: {
-					book,
-					currentChapter: chapter,
-				},
-			});
-		}
-	}
+    for (const chapter of book.data.chapters) {
+      paths.push({
+        params: {
+          book: bookSlug,
+          chapter: chapter.slug,
+        },
+        props: {
+          book,
+          currentChapter: chapter,
+        },
+      });
+    }
+  }
 
-	return paths;
+  return paths;
 }
 
 type Props = {
-	book: CollectionEntry<'books'>;
-	currentChapter: { title: string; slug: string; free: boolean };
+  book: CollectionEntry<"books">;
+  currentChapter: { title: string; slug: string; free: boolean };
 };
 
 const { book, currentChapter } = Astro.props;
-const bookSlug = book.id.split('/')[0];
+const bookSlug = book.id.split("/")[0];
 
 // 現在の章のインデックス
-const currentChapterIndex = book.data.chapters.findIndex(
-	(ch) => ch.slug === currentChapter.slug
-);
+const currentChapterIndex = book.data.chapters.findIndex((ch) => ch.slug === currentChapter.slug);
 
 // 前後の章
 const prevChapter = currentChapterIndex > 0 ? book.data.chapters[currentChapterIndex - 1] : null;
 const nextChapter =
-	currentChapterIndex < book.data.chapters.length - 1
-		? book.data.chapters[currentChapterIndex + 1]
-		: null;
+  currentChapterIndex < book.data.chapters.length - 1
+    ? book.data.chapters[currentChapterIndex + 1]
+    : null;
 
 // Markdownファイルの読み込み
 const chapterPath = join(
-	process.cwd(),
-	'src',
-	'content',
-	'books',
-	bookSlug,
-	`${currentChapter.slug}.md`
+  process.cwd(),
+  "src",
+  "content",
+  "books",
+  bookSlug,
+  `${currentChapter.slug}.md`
 );
 
-let chapterContent = '';
+let chapterContent = "";
 try {
-	chapterContent = await readFile(chapterPath, 'utf-8');
+  chapterContent = await readFile(chapterPath, "utf-8");
 } catch (error) {
-	console.error(`Failed to read chapter: ${chapterPath}`, error);
-	chapterContent = '# エラー\n\nこの章のコンテンツが見つかりませんでした。';
+  console.error(`Failed to read chapter: ${chapterPath}`, error);
+  chapterContent = "# エラー\n\nこの章のコンテンツが見つかりませんでした。";
 }
 
 // 簡易的なMarkdown to HTMLの変換（本番ではmarked等を使用すべき）
-import { marked } from 'marked';
+import { marked } from "marked";
 const htmlContent = marked(chapterContent);
 ---
 
 <!doctype html>
 <html lang="ja">
-	<head>
-		<BaseHead
-			title={`${currentChapter.title} - ${book.data.title}`}
-			description={book.data.summary}
-		/>
-	</head>
-	<body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
-		<Header />
+  <head>
+    <BaseHead
+      title={`${currentChapter.title} - ${book.data.title}`}
+      description={book.data.summary}
+    />
+  </head>
+  <body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
+    <Header />
 
-		<div class="max-w-7xl mx-auto px-4 py-8">
-			<div class="flex gap-8">
-				{/* サイドバー：目次 */}
-				<aside class="hidden lg:block w-64 flex-shrink-0">
-					<div class="sticky top-8">
-						<a
-							href={`/books/${bookSlug}`}
-							class="text-sm text-blue-600 hover:underline mb-4 block"
-						>
-							← 本の詳細に戻る
-						</a>
+    <div class="max-w-7xl mx-auto px-4 py-8">
+      <div class="flex gap-8">
+        {/* サイドバー：目次 */}
+        <aside class="hidden lg:block w-64 flex-shrink-0">
+          <div class="sticky top-8">
+            <a href={`/books/${bookSlug}`} class="text-sm text-blue-600 hover:underline mb-4 block">
+              ← 本の詳細に戻る
+            </a>
 
-						<h2 class="font-bold text-lg mb-4">{book.data.title}</h2>
+            <h2 class="font-bold text-lg mb-4">{book.data.title}</h2>
 
-						<nav class="space-y-1">
-							{book.data.chapters.map((chapter, index) => (
-								<a
-									href={`/books/${bookSlug}/${chapter.slug}`}
-									class={`block px-3 py-2 rounded text-sm transition-colors ${
-										chapter.slug === currentChapter.slug
-											? 'bg-blue-100 text-blue-900 font-bold'
-											: 'text-gray-700 hover:bg-gray-100'
-									}`}
-								>
-									<span class="text-gray-500 mr-2">{index + 1}.</span>
-									{chapter.title}
-								</a>
-							))}
-						</nav>
-					</div>
-				</aside>
+            <nav class="space-y-1">
+              {
+                book.data.chapters.map((chapter, index) => (
+                  <a
+                    href={`/books/${bookSlug}/${chapter.slug}`}
+                    class={`block px-3 py-2 rounded text-sm transition-colors ${
+                      chapter.slug === currentChapter.slug
+                        ? "bg-blue-100 text-blue-900 font-bold"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <span class="text-gray-500 mr-2">{index + 1}.</span>
+                    {chapter.title}
+                  </a>
+                ))
+              }
+            </nav>
+          </div>
+        </aside>
 
-				{/* メインコンテンツ */}
-				<main class="flex-1 min-w-0">
-					<article class="max-w-3xl">
-						<header class="mb-8">
-							<div class="text-sm text-gray-500 mb-2">
-								第{currentChapterIndex + 1}章
-							</div>
-							<h1 class="text-4xl font-bold text-gray-900">
-								{currentChapter.title}
-							</h1>
-						</header>
+        {/* メインコンテンツ */}
+        <main class="flex-1 min-w-0">
+          <article class="max-w-3xl">
+            <header class="mb-8">
+              <div class="text-sm text-gray-500 mb-2">
+                第{currentChapterIndex + 1}章
+              </div>
+              <h1 class="text-4xl font-bold text-gray-900">
+                {currentChapter.title}
+              </h1>
+            </header>
 
-						{/* 章の本文 */}
-						<div class="prose prose-lg max-w-none" set:html={htmlContent} />
+            {/* 章の本文 */}
+            <div class="prose prose-lg max-w-none" set:html={htmlContent} />
 
-						{/* ページネーション */}
-						<div class="mt-12 pt-8 border-t border-gray-200 flex justify-between">
-							<div>
-								{prevChapter && (
-									<a
-										href={`/books/${bookSlug}/${prevChapter.slug}`}
-										class="inline-flex items-center text-blue-600 hover:text-blue-800"
-									>
-										<svg
-											class="w-5 h-5 mr-2"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M15 19l-7-7 7-7"
-											></path>
-										</svg>
-										<div class="text-left">
-											<div class="text-xs text-gray-500">前の章</div>
-											<div class="font-bold">{prevChapter.title}</div>
-										</div>
-									</a>
-								)}
-							</div>
+            {/* ページネーション */}
+            <div class="mt-12 pt-8 border-t border-gray-200 flex justify-between">
+              <div>
+                {
+                  prevChapter && (
+                    <a
+                      href={`/books/${bookSlug}/${prevChapter.slug}`}
+                      class="inline-flex items-center text-blue-600 hover:text-blue-800"
+                    >
+                      <svg
+                        class="w-5 h-5 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                      <div class="text-left">
+                        <div class="text-xs text-gray-500">前の章</div>
+                        <div class="font-bold">{prevChapter.title}</div>
+                      </div>
+                    </a>
+                  )
+                }
+              </div>
 
-							<div>
-								{nextChapter && (
-									<a
-										href={`/books/${bookSlug}/${nextChapter.slug}`}
-										class="inline-flex items-center text-blue-600 hover:text-blue-800"
-									>
-										<div class="text-right">
-											<div class="text-xs text-gray-500">次の章</div>
-											<div class="font-bold">{nextChapter.title}</div>
-										</div>
-										<svg
-											class="w-5 h-5 ml-2"
-											fill="none"
-											stroke="currentColor"
-											viewBox="0 0 24 24"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M9 5l7 7-7 7"
-											></path>
-										</svg>
-									</a>
-								)}
-							</div>
-						</div>
-					</article>
-				</main>
-			</div>
-		</div>
+              <div>
+                {
+                  nextChapter && (
+                    <a
+                      href={`/books/${bookSlug}/${nextChapter.slug}`}
+                      class="inline-flex items-center text-blue-600 hover:text-blue-800"
+                    >
+                      <div class="text-right">
+                        <div class="text-xs text-gray-500">次の章</div>
+                        <div class="font-bold">{nextChapter.title}</div>
+                      </div>
+                      <svg
+                        class="w-5 h-5 ml-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </a>
+                  )
+                }
+              </div>
+            </div>
+          </article>
+        </main>
+      </div>
+    </div>
 
-		<Footer />
-	</body>
+    <Footer />
+  </body>
 </html>

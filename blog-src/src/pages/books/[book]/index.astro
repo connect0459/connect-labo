@@ -1,118 +1,119 @@
 ---
-import { getCollection, type CollectionEntry } from 'astro:content';
-import BaseHead from '../../../components/BaseHead.astro';
-import Header from '../../../components/Header.astro';
-import Footer from '../../../components/Footer.astro';
+import { getCollection, type CollectionEntry } from "astro:content";
+import BaseHead from "../../../components/BaseHead.astro";
+import Header from "../../../components/Header.astro";
+import Footer from "../../../components/Footer.astro";
 
 export async function getStaticPaths() {
-	const books = await getCollection('books');
-	return books.map((book) => ({
-		params: { book: book.id.split('/')[0] },
-		props: { book },
-	}));
+  const books = await getCollection("books");
+  return books.map((book) => ({
+    params: { book: book.id.split("/")[0] },
+    props: { book },
+  }));
 }
 
 type Props = {
-	book: CollectionEntry<'books'>;
+  book: CollectionEntry<"books">;
 };
 
 const { book } = Astro.props;
-const bookSlug = book.id.split('/')[0];
+const bookSlug = book.id.split("/")[0];
 ---
 
 <!doctype html>
 <html lang="ja">
-	<head>
-		<BaseHead title={book.data.title} description={book.data.summary} />
-	</head>
-	<body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
-		<Header />
-		<main class="max-w-4xl mx-auto px-4 py-12">
-			{/* 本の情報 */}
-			<div class="mb-12">
-				<a
-					href="/books"
-					class="text-sm text-blue-600 hover:underline mb-4 inline-block"
-				>
-					← Books一覧に戻る
-				</a>
+  <head>
+    <BaseHead title={book.data.title} description={book.data.summary} />
+  </head>
+  <body class="font-['Atkinson',sans-serif] bg-white text-gray-900">
+    <Header />
+    <main class="max-w-4xl mx-auto px-4 py-12">
+      {/* 本の情報 */}
+      <div class="mb-12">
+        <a href="/books" class="text-sm text-blue-600 hover:underline mb-4 inline-block">
+          ← Books一覧に戻る
+        </a>
 
-				<div class="flex gap-8 mb-8">
-					{/* カバー画像 */}
-					<div class="w-64 flex-shrink-0">
-						<div class="aspect-[3/4] bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
-							<span class="text-white text-8xl">📚</span>
-						</div>
-					</div>
+        <div class="flex gap-8 mb-8">
+          {/* カバー画像 */}
+          <div class="w-64 flex-shrink-0">
+            <div
+              class="aspect-[3/4] bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center"
+            >
+              <span class="text-white text-8xl">📚</span>
+            </div>
+          </div>
 
-					{/* 本の詳細 */}
-					<div class="flex-1">
-						<h1 class="text-4xl font-bold mb-4 text-gray-900">
-							{book.data.title}
-						</h1>
+          {/* 本の詳細 */}
+          <div class="flex-1">
+            <h1 class="text-4xl font-bold mb-4 text-gray-900">
+              {book.data.title}
+            </h1>
 
-						<p class="text-lg text-gray-600 mb-6">{book.data.summary}</p>
+            <p class="text-lg text-gray-600 mb-6">{book.data.summary}</p>
 
-						{/* タグ */}
-						<div class="flex flex-wrap gap-2 mb-6">
-							{book.data.topics.map((topic) => (
-								<span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
-									{topic}
-								</span>
-							))}
-						</div>
+            {/* タグ */}
+            <div class="flex flex-wrap gap-2 mb-6">
+              {
+                book.data.topics.map((topic) => (
+                  <span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                    {topic}
+                  </span>
+                ))
+              }
+            </div>
 
-						{/* 価格 */}
-						<div class="text-2xl font-bold text-gray-900 mb-6">
-							{book.data.price === 0 ? '無料' : `¥${book.data.price}`}
-						</div>
+            {/* 価格 */}
+            <div class="text-2xl font-bold text-gray-900 mb-6">
+              {book.data.price === 0 ? "無料" : `¥${book.data.price}`}
+            </div>
 
-						{/* 読み始めるボタン */}
-						{book.data.chapters.length > 0 && (
-							<a
-								href={`/books/${bookSlug}/${book.data.chapters[0].slug}`}
-								class="inline-block px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors"
-							>
-								読み始める
-							</a>
-						)}
-					</div>
-				</div>
-			</div>
+            {/* 読み始めるボタン */}
+            {
+              book.data.chapters.length > 0 && (
+                <a
+                  href={`/books/${bookSlug}/${book.data.chapters[0].slug}`}
+                  class="inline-block px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  読み始める
+                </a>
+              )
+            }
+          </div>
+        </div>
+      </div>
 
-			{/* 目次 */}
-			<div class="border-t border-gray-200 pt-8">
-				<h2 class="text-2xl font-bold mb-6">目次</h2>
+      {/* 目次 */}
+      <div class="border-t border-gray-200 pt-8">
+        <h2 class="text-2xl font-bold mb-6">目次</h2>
 
-				<div class="space-y-3">
-					{book.data.chapters.map((chapter, index) => (
-						<a
-							href={`/books/${bookSlug}/${chapter.slug}`}
-							class="block p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-						>
-							<div class="flex items-center justify-between">
-								<div class="flex-1">
-									<div class="flex items-center gap-3">
-										<span class="text-sm text-gray-500 font-medium">
-											第{index + 1}章
-										</span>
-										<h3 class="text-lg font-bold text-gray-900">
-											{chapter.title}
-										</h3>
-									</div>
-								</div>
+        <div class="space-y-3">
+          {
+            book.data.chapters.map((chapter, index) => (
+              <a
+                href={`/books/${bookSlug}/${chapter.slug}`}
+                class="block p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-3">
+                      <span class="text-sm text-gray-500 font-medium">第{index + 1}章</span>
+                      <h3 class="text-lg font-bold text-gray-900">{chapter.title}</h3>
+                    </div>
+                  </div>
 
-								{chapter.free && (
-									<span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
-										無料
-									</span>
-								)}
-							</div>
-						</a>
-					))}
-				</div>
-			</div>
-		</main>
-		<Footer />
-	</body>
+                  {chapter.free && (
+                    <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">
+                      無料
+                    </span>
+                  )}
+                </div>
+              </a>
+            ))
+          }
+        </div>
+      </div>
+    </main>
+    <Footer />
+  </body>
 </html>
