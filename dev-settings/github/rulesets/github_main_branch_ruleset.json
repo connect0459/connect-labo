@@ -1,5 +1,5 @@
 {
-  "name": "OSS Main Branch Protection",
+  "name": "Main Branch Protection",
   "target": "branch",
   "source_type": "Repository",
   "source": "Repository",
