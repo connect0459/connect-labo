@@ -60,7 +60,7 @@
       "Bash(sudo:*)",
       "Bash(wget:*)",
       "Bash(git commit --no-verify:*)",
-      "Bash(git reset:*)",
+      "Bash(git reset --hard:*)",
       "Bash(git rebase:*)",
       "Read(.env*)",
       "Read(id_ed25519)",
