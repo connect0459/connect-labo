@@ -171,6 +171,11 @@
   "lpubsppop01.autoTimeStamp.filenamePattern": ".md*",
   "lpubsppop01.autoTimeStamp.modifiedTimeStart": "^autoTimestamp:",
   "lpubsppop01.autoTimeStamp.momentFormat": " YYYY-MM-DDTHH:mm:ss",
+  // Markdown All in One設定
+  // 見出しの目次にする範囲をh2~h4に限定
+  "markdown.extension.toc.levels": "2..4",
+  // 自動更新を無効化
+  "markdown.extension.toc.updateOnSave": false,
   // Marp設定
   "markdown.marp.html": "all",
   // Markdown PDF設定
