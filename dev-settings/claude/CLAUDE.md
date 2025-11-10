@@ -405,6 +405,47 @@ type User struct { ... }
 - **ライブラリ**: キャレット付きバージョン指定
 - **更新方針**: 動作する最新バージョンを使用
 
+## 🪝 Git Hooks推奨設定
+
+### コミットメッセージのUTF-8検証
+
+コミットメッセージは必ずUTF-8エンコーディングで記述する必要があります（既に規約として94行目に記載）。これを自動的に検証するため、`commit-msg`フックの設定を推奨します。
+
+#### セットアップ手順
+
+1. **フックファイルの作成**
+
+   ```bash
+   touch .git/hooks/commit-msg
+   chmod +x .git/hooks/commit-msg
+   ```
+
+2. **フック内容の記述**
+
+   `.git/hooks/commit-msg`に以下を記述：
+
+   ```bash
+   #!/bin/sh
+   # UTF-8エンコーディング検証フック
+
+   commit_msg_file=$1
+
+   if ! iconv -f UTF-8 -t UTF-8 "$commit_msg_file" > /dev/null 2>&1; then
+       echo "Error: Commit messages must be in UTF-8 encoding"
+       exit 1
+   fi
+   ```
+
+#### 動作
+
+- UTF-8以外のエンコーディングでコミットメッセージを書いた場合、コミットが拒否されます
+- 日本語を含むConventional Commitsメッセージも正しく処理されます
+
+#### 注意事項
+
+- このフックはローカル環境のみで機能します（`.git/hooks`はリポジトリに含まれない）
+- チーム開発の場合は、READMEやセットアップドキュメントにフックの設定手順を記載することを推奨
+
 ## 🤖 Claude Code協働ルール
 
 ### 必須事項 (YOU MUST)
