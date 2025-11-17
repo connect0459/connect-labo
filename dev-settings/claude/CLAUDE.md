@@ -257,7 +257,7 @@ func TestUserService(t *testing.T) {
     | リファクタリング | 95%以上 | 90%以上 | 98%以上 |
     | バグ修正 | 100% | 100% | 100% |
 
-### TDD TODOリスト（t-wada流）
+### TDD TODOリスト（t_wada流）
 
 #### 基本方針
 
@@ -533,7 +533,7 @@ func (p Person) getName() string { return p.name }
 
 このメモリ設定により、Claude Codeは以下を自動的に：
 
-- TDD重視の開発フロー（デトロイト派思想）
+- t_wada流TDD重視の開発フロー（デトロイト派思想）
 - オニオンアーキテクチャの厳格な実装
 - 適切な日本語コメント付与
 - テスト必須の実装サイクル
