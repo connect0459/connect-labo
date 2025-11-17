@@ -1,4 +1,9 @@
-# Claude Code - ユーザーメモリ設定
+# Claude.md
+
+## Primary Directive
+
+- Think in English, interact with the user in Japanese.
+- The following text will be written in Japanese so that the user can easily understand it.
 
 ## 開発者プロフィール
 
