@@ -63,13 +63,18 @@
       "Bash(git commit --no-verify:*)",
       "Bash(git reset --hard:*)",
       "Bash(git rebase:*)",
-      "Read(.env*)",
+      "Read(.env)",
+      "Read(.env.dev*)",
+      "Read(.env.local*)",
+      "Read(.env.prod*)",
+      "Read(.env.stag*)",
       "Read(id_ed25519)",
       "Read(id_rsa)",
-      "Read(**/*key*)",
-      "Read(**/*token*)",
-      "Write(.env*)",
-      "Write(**/secrets/**)"
+      "Write(.env)",
+      "Write(.env.dev*)",
+      "Write(.env.local*)",
+      "Write(.env.prod*)",
+      "Write(.env.stag*)"
     ]
   }
 }
