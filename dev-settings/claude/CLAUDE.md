@@ -477,6 +477,7 @@ type User struct { ... }
 - **IMPORTANT**: Featuresパターンでビジネス機能を適切に分離
 - **IMPORTANT**: TidyingsとRefactoringを明確に区別し、適切なコミットメッセージを使用
 - **IMPORTANT**: カバレッジ目標未達成時は実装完了とみなさず、テスト追加で目標達成を必須とする
+- **IMPORTANT**: GitHubのリソース（PR、Issue、リリース、タグなど）にアクセスする際は、WebFetchが失敗した場合に`gh`コマンド（GitHub CLI）の利用可能性を確認し、存在すれば`gh`コマンドで再試行する。可能であれば、最初から`gh`コマンドを優先的に使用することを推奨
 
 ### 絶対禁止 (NEVER)
 
