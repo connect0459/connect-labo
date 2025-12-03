@@ -63,7 +63,7 @@ Presentation → Application → Domain ← Infrastructure
 
 ## リポジトリパターンの実装
 
-詳細な実装例は `agent_docs/examples/repository-pattern.md` を参照してください。
+詳細な実装例は `agent-docs/examples/repository-pattern.md` を参照してください。
 
 ### 基本方針
 

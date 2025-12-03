@@ -143,4 +143,4 @@ export type { User } from './types/user'
 ## Package by Features + オニオンアーキテクチャ
 
 大規模なフロントエンドでは、feature内でオニオンアーキテクチャを採用することも検討できます。
-詳細は `agent_docs/architecture/onion-architecture.md` を参照してください。
+詳細は `agent-docs/architecture/onion-architecture.md` を参照してください。

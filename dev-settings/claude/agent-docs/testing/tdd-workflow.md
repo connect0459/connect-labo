@@ -156,7 +156,7 @@ func TestUserService(t *testing.T) {
 ## Evergreenテストの原則
 
 テストは時間が経っても価値を保ち続ける内容に焦点を当てる。
-詳細は `agent_docs/testing/evergreen-principles.md` を参照してください。
+詳細は `agent-docs/testing/evergreen-principles.md` を参照してください。
 
 ### Evergreenの基本原則
 
@@ -168,8 +168,8 @@ func TestUserService(t *testing.T) {
 ## カバレッジ目標
 
 実装開始前に必ずユーザーとカバレッジ目標を協議し、定量的な指標を設定します。
-詳細は `agent_docs/testing/coverage-goals.md` を参照してください。
+詳細は `agent-docs/testing/coverage-goals.md` を参照してください。
 
 ## 構造化テスト設計
 
-詳細は `agent_docs/testing/test-object-pattern.md` を参照してください。
+詳細は `agent-docs/testing/test-object-pattern.md` を参照してください。

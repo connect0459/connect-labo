@@ -113,7 +113,7 @@ git commit -m "refactor: メールアドレス検証ロジックをドメイン�
 
 ### Tidyings vs Refactoring
 
-詳細は `agent_docs/conventions/tidyings-vs-refactoring.md` を参照してください。
+詳細は `agent-docs/conventions/tidyings-vs-refactoring.md` を参照してください。
 
 ```bash
 # Tidyings（2分以内の小さな改善）
@@ -142,7 +142,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 コミットメッセージは必ずUTF-8エンコーディングで記述する必要があります。
 Git Hooksで自動検証することを推奨します。
 
-詳細は `agent_docs/conventions/git-hooks.md` を参照してください。
+詳細は `agent-docs/conventions/git-hooks.md` を参照してください。
 
 ## OSS開発時の考慮事項
 
