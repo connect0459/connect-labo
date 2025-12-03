@@ -10,7 +10,7 @@ npm create astro@latest
 
 ## プロジェクト構造
 
-```
+```text
 src/
 ├── components/  # コンポーネント
 ├── layouts/     # レイアウト
