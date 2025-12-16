@@ -187,7 +187,8 @@
   // Markdownlint設定
   "markdownlint.config": {
     "MD033": false, // Inline HTMLを許可
-    "MD034": false // Bare URLを許可
+    "MD034": false, // Bare URLを許可
+    "MD046": false // コードブロックのスタイルを無視
   },
   // ==========================================
   // その他の設定
