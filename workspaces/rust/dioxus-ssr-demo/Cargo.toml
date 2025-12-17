@@ -1,0 +1,22 @@
+[package]
+name = "dioxus-ssr-demo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dioxus = { version = "0.7", features = ["fullstack"] }
+serde = { version = "1", features = ["derive"] }
+rand = "0.8"
+getrandom = { version = "0.2", features = ["js"] }
+
+# Server dependencies (optional)
+axum = { version = "0.8", optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", optional = true }
+dioxus-cli-config = { version = "0.7", optional = true }
+
+[features]
+default = []
+server = ["dioxus/server", "dep:axum", "dep:tokio", "dep:tracing", "dep:tracing-subscriber", "dioxus-cli-config"]
+web = ["dioxus/web"]
