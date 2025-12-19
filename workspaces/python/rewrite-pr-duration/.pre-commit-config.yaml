@@ -1,0 +1,29 @@
+# Pre-commit configuration for rustgression
+repos:
+  # Python formatting and linting with Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.2
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+      # Run the formatter
+      - id: ruff-format
+
+  # General pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      # Check YAML syntax
+      - id: check-yaml
+      # Check TOML syntax
+      - id: check-toml
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+      # Check for large files
+      - id: check-added-large-files
+        args: [--maxkb=500]
