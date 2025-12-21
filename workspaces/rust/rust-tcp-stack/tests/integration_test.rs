@@ -3,6 +3,7 @@ use rust_tcp_stack::ipv4::{IpProtocol, Ipv4Packet, Ipv4PacketBuilder};
 use rust_tcp_stack::tcp::{TcpFlags, TcpPacket, TcpPacketBuilder};
 use std::net::Ipv4Addr;
 
+/// Phase 5
 #[test]
 fn 完全なsynパケットを構築できる() {
     // TCP SYN
@@ -36,5 +37,65 @@ fn 完全なsynパケットを構築できる() {
 
     assert_eq!(tcp_packet.source_port(), 12345);
     assert_eq!(tcp_packet.destination_port(), 80);
+    assert!(tcp_packet.is_syn());
+}
+
+/// Phase 6
+#[test]
+fn スタック全体をパースできる() {
+    // 実際のパケットバイト列を手動で構築
+    let mut packet = Vec::new();
+
+    // Ethernetヘッダー
+    packet.extend_from_slice(&[0xff, 0xff, 0xff, 0xff, 0xff, 0xff]); // Dst MAC
+    packet.extend_from_slice(&[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]); // Src MAC
+    packet.extend_from_slice(&[0x08, 0x00]); // EtherType: IPv4
+
+    // IPv4ヘッダー (20バイト)
+    packet.extend_from_slice(&[
+        0x45, 0x00, 0x00, 0x28, // Version, IHL, ToS, Total Length (40バイト)
+        0x00, 0x01, 0x00, 0x00, // Identification, Flags, Fragment Offset
+        0x40, 0x06, 0x00, 0x00, // TTL (64), Protocol (TCP=6), Checksum
+        0xc0, 0xa8, 0x01, 0x01, // Source IP: 192.168.1.1
+        0xc0, 0xa8, 0x01, 0x02, // Destination IP: 192.168.1.2
+    ]);
+
+    // チェックサム計算して更新
+    let ipv4_checksum = rust_tcp_stack::ipv4::calculate_ipv4_checksum(&packet[14..34]);
+    packet[24..26].copy_from_slice(&ipv4_checksum.to_be_bytes());
+
+    // TCPヘッダー (20バイト)
+    packet.extend_from_slice(&[
+        0x30, 0x39, // Source Port: 12345
+        0x00, 0x50, // Destination Port: 80
+        0x00, 0x00, 0x03, 0xe8, // Sequence Number: 1000
+        0x00, 0x00, 0x00, 0x00, // Acknowledgment Number: 0
+        0x50, 0x02, // Data Offset (5), Flags (SYN)
+        0xff, 0xff, // Window Size: 65535
+        0x00, 0x00, // Checksum
+        0x00, 0x00, // Urgent Pointer
+    ]);
+
+    // TCPチェックサム計算して更新
+    let tcp_checksum = rust_tcp_stack::tcp::calculate_tcp_checksum(
+        &packet[34..],
+        Ipv4Addr::new(192, 168, 1, 1),
+        Ipv4Addr::new(192, 168, 1, 2),
+    );
+    packet[50..52].copy_from_slice(&tcp_checksum.to_be_bytes());
+
+    // パース
+    let eth_frame = EthernetFrame::new(&packet).unwrap();
+    assert_eq!(eth_frame.ether_type(), EtherType::Ipv4);
+
+    let ip_packet = Ipv4Packet::new(eth_frame.payload()).unwrap();
+    assert_eq!(ip_packet.source(), Ipv4Addr::new(192, 168, 1, 1));
+    assert_eq!(ip_packet.destination(), Ipv4Addr::new(192, 168, 1, 2));
+    assert_eq!(ip_packet.protocol(), IpProtocol::Tcp);
+
+    let tcp_packet = TcpPacket::new(ip_packet.payload()).unwrap();
+    assert_eq!(tcp_packet.source_port(), 12345);
+    assert_eq!(tcp_packet.destination_port(), 80);
+    assert_eq!(tcp_packet.sequence_number(), 1000);
     assert!(tcp_packet.is_syn());
 }
