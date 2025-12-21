@@ -1,3 +1,37 @@
+use std::net::Ipv4Addr;
+
+pub fn calculate_tcp_checksum(tcp_segment: &[u8], src_ip: Ipv4Addr, dst_ip: Ipv4Addr) -> u16 {
+    let mut sum: u32 = 0;
+
+    // 疑似ヘッダーの追加
+    for &byte in src_ip.octets().iter() {
+        sum += byte as u32;
+    }
+    for &byte in dst_ip.octets().iter() {
+        sum += byte as u32;
+    }
+    sum += 6; // Protocol: TCP
+    sum += tcp_segment.len() as u32;
+
+    // TCPセグメント全体を16ビットワードで加算
+    for i in (0..tcp_segment.len()).step_by(2) {
+        let word = if i + 1 < tcp_segment.len() {
+            u16::from_be_bytes([tcp_segment[i], tcp_segment[i + 1]]) as u32
+        } else {
+            (tcp_segment[i] as u32) << 8
+        };
+        sum += word;
+    }
+
+    // キャリーを折り返す
+    while (sum >> 16) != 0 {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+
+    // 1の補数を取る
+    !(sum as u16)
+}
+
 pub struct TcpPacket<'a> {
     data: &'a [u8],
 }
@@ -60,6 +94,7 @@ impl<'a> TcpPacket<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::net::Ipv4Addr;
 
     #[test]
     fn tcpパケットは20バイト未満を拒否する() {
@@ -162,5 +197,25 @@ mod tests {
 
         let packet = TcpPacket::new(&data).unwrap();
         assert_eq!(packet.payload(), b"HelloWorld");
+    }
+
+    #[test]
+    fn チェックサムを計算できる() {
+        let tcp_data = vec![
+            0x00, 0x50, // Source Port: 80
+            0x1f, 0x90, // Destination Port: 8080
+            0x00, 0x00, 0x00, 0x64, // Sequence: 100
+            0x00, 0x00, 0x00, 0x00, // Acknowledgment: 0
+            0x50, 0x02, // Data Offset: 5, Flags: SYN
+            0xff, 0xff, // Window: 65535
+            0x00, 0x00, // Checksum: 0 (計算前)
+            0x00, 0x00, // Urgent Pointer: 0
+        ];
+
+        let src_ip = Ipv4Addr::new(192, 168, 1, 1);
+        let dst_ip = Ipv4Addr::new(192, 168, 1, 2);
+
+        let checksum = calculate_tcp_checksum(&tcp_data, src_ip, dst_ip);
+        assert_ne!(checksum, 0);
     }
 }
