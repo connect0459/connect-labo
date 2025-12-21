@@ -30,6 +30,67 @@ pub enum EtherType {
     Unknown(u16),
 }
 
+pub struct EthernetFrameBuilder {
+    destination: MacAddress,
+    source: MacAddress,
+    ether_type: EtherType,
+    payload: Vec<u8>,
+}
+
+impl EthernetFrameBuilder {
+    pub fn new() -> Self {
+        EthernetFrameBuilder {
+            destination: MacAddress([0; 6]),
+            source: MacAddress([0; 6]),
+            ether_type: EtherType::Ipv4,
+            payload: Vec::new(),
+        }
+    }
+
+    pub fn destination(mut self, mac: MacAddress) -> Self {
+        self.destination = mac;
+        self
+    }
+
+    pub fn source(mut self, mac: MacAddress) -> Self {
+        self.source = mac;
+        self
+    }
+
+    pub fn ether_type(mut self, ether_type: EtherType) -> Self {
+        self.ether_type = ether_type;
+        self
+    }
+
+    pub fn payload(mut self, data: &[u8]) -> Self {
+        self.payload = data.to_vec();
+        self
+    }
+
+    pub fn build(self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(14 + self.payload.len());
+
+        // 宛先MAC
+        bytes.extend_from_slice(&self.destination.0);
+
+        // 送信元MAC
+        bytes.extend_from_slice(&self.source.0);
+
+        // EtherType
+        let ether_type_value = match self.ether_type {
+            EtherType::Ipv4 => 0x0800u16,
+            EtherType::Arp => 0x0806u16,
+            EtherType::Unknown(v) => v,
+        };
+        bytes.extend_from_slice(&ether_type_value.to_be_bytes());
+
+        // ペイロード
+        bytes.extend_from_slice(&self.payload);
+
+        bytes
+    }
+}
+
 pub struct EthernetFrame<'a> {
     data: &'a [u8],
 }
@@ -150,4 +211,22 @@ mod tests {
         let frame = EthernetFrame::new(&data).unwrap();
         assert_eq!(frame.payload(), b"Hello!");
     }
+
+#[test]
+fn ethernetフレームを構築できる() {
+    let src = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+    let dst = MacAddress::broadcast();
+
+    let builder = EthernetFrameBuilder::new()
+        .destination(dst)
+        .source(src)
+        .ether_type(EtherType::Ipv4);
+
+    let frame_bytes = builder.build();
+
+    assert_eq!(frame_bytes.len(), 14);
+    assert_eq!(&frame_bytes[0..6], &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+    assert_eq!(&frame_bytes[6..12], &[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+    assert_eq!(&frame_bytes[12..14], &[0x08, 0x00]); // IPv4
+}
 }
