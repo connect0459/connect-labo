@@ -372,7 +372,7 @@ assert_eq!(received_packet.source_port(), src_port);
 
 ```rust
 #[test]
-fn 3wayハンドシェイクをシミュレートできる() {
+fn threewayハンドシェイクをシミュレートできる() {
     let client_mac = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
     let server_mac = MacAddress::new([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
     let client_ip = Ipv4Addr::new(192, 168, 1, 100);
@@ -664,7 +664,7 @@ running 4 tests
 test スタック全体をパースできる ... ok
 test スタック全体を構築できる ... ok
 test 構築とパースの往復で同じになる ... ok
-test 3wayハンドシェイクをシミュレートできる ... ok
+test threewayハンドシェイクをシミュレートできる ... ok
 
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ```
