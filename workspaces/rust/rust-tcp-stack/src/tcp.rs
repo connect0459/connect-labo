@@ -32,6 +32,164 @@ pub fn calculate_tcp_checksum(tcp_segment: &[u8], src_ip: Ipv4Addr, dst_ip: Ipv4
     !(sum as u16)
 }
 
+pub struct TcpFlags {
+    pub syn: bool,
+    pub ack: bool,
+    pub fin: bool,
+    pub rst: bool,
+}
+
+impl TcpFlags {
+    pub const SYN: Self = TcpFlags {
+        syn: true,
+        ack: false,
+        fin: false,
+        rst: false,
+    };
+
+    pub const SYN_ACK: Self = TcpFlags {
+        syn: true,
+        ack: true,
+        fin: false,
+        rst: false,
+    };
+
+    pub const ACK: Self = TcpFlags {
+        syn: false,
+        ack: true,
+        fin: false,
+        rst: false,
+    };
+
+    pub const FIN_ACK: Self = TcpFlags {
+        syn: false,
+        ack: true,
+        fin: true,
+        rst: false,
+    };
+
+    fn to_byte(&self) -> u8 {
+        let mut flags = 0u8;
+        if self.fin {
+            flags |= 0x01;
+        }
+        if self.syn {
+            flags |= 0x02;
+        }
+        if self.rst {
+            flags |= 0x04;
+        }
+        if self.ack {
+            flags |= 0x10;
+        }
+        flags
+    }
+}
+
+pub struct TcpPacketBuilder {
+    source_port: u16,
+    destination_port: u16,
+    sequence_number: u32,
+    acknowledgment_number: u32,
+    flags: TcpFlags,
+    window_size: u16,
+    payload: Vec<u8>,
+}
+
+impl TcpPacketBuilder {
+    pub fn new() -> Self {
+        TcpPacketBuilder {
+            source_port: 0,
+            destination_port: 0,
+            sequence_number: 0,
+            acknowledgment_number: 0,
+            flags: TcpFlags::ACK,
+            window_size: 65535,
+            payload: Vec::new(),
+        }
+    }
+
+    pub fn source_port(mut self, port: u16) -> Self {
+        self.source_port = port;
+        self
+    }
+
+    pub fn destination_port(mut self, port: u16) -> Self {
+        self.destination_port = port;
+        self
+    }
+
+    pub fn sequence_number(mut self, seq: u32) -> Self {
+        self.sequence_number = seq;
+        self
+    }
+
+    pub fn acknowledgment_number(mut self, ack: u32) -> Self {
+        self.acknowledgment_number = ack;
+        self
+    }
+
+    pub fn flags(mut self, flags: TcpFlags) -> Self {
+        self.flags = flags;
+        self
+    }
+
+    pub fn window_size(mut self, window: u16) -> Self {
+        self.window_size = window;
+        self
+    }
+
+    pub fn payload(mut self, data: &[u8]) -> Self {
+        self.payload = data.to_vec();
+        self
+    }
+
+    pub fn build(self) -> Vec<u8> {
+        let total_length = 20 + self.payload.len();
+        let mut bytes = vec![0u8; total_length];
+
+        // Source Port
+        bytes[0..2].copy_from_slice(&self.source_port.to_be_bytes());
+
+        // Destination Port
+        bytes[2..4].copy_from_slice(&self.destination_port.to_be_bytes());
+
+        // Sequence Number
+        bytes[4..8].copy_from_slice(&self.sequence_number.to_be_bytes());
+
+        // Acknowledgment Number
+        bytes[8..12].copy_from_slice(&self.acknowledgment_number.to_be_bytes());
+
+        // Data Offset (5 = 20 bytes) + Reserved
+        bytes[12] = 0x50;
+
+        // Flags
+        bytes[13] = self.flags.to_byte();
+
+        // Window Size
+        bytes[14..16].copy_from_slice(&self.window_size.to_be_bytes());
+
+        // Checksum (0で初期化、後で計算する場合は別途)
+        bytes[16..18].copy_from_slice(&[0, 0]);
+
+        // Payload
+        bytes[20..].copy_from_slice(&self.payload);
+
+        bytes
+    }
+
+    // 疑似ヘッダーを使ったチェックサム付きビルド
+    pub fn build_with_checksum(self, src_ip: Ipv4Addr, dst_ip: Ipv4Addr) -> Vec<u8> {
+        let mut bytes = self.build();
+
+        // チェックサム計算
+        let checksum = super::tcp::calculate_tcp_checksum(&bytes, src_ip, dst_ip);
+        bytes[16..18].copy_from_slice(&checksum.to_be_bytes());
+
+        bytes
+    }
+}
+
 pub struct TcpPacket<'a> {
     data: &'a [u8],
 }
@@ -217,5 +375,31 @@ mod tests {
 
         let checksum = calculate_tcp_checksum(&tcp_data, src_ip, dst_ip);
         assert_ne!(checksum, 0);
+    }
+
+    #[test]
+    fn tcpセグメントを構築できる() {
+        let src_port = 12345;
+        let dst_port = 80;
+        let seq = 100;
+        let ack = 0;
+
+        let segment_bytes = TcpPacketBuilder::new()
+            .source_port(src_port)
+            .destination_port(dst_port)
+            .sequence_number(seq)
+            .acknowledgment_number(ack)
+            .flags(TcpFlags::SYN)
+            .build();
+
+        // パース
+        let segment = TcpPacket::new(&segment_bytes).unwrap();
+
+        // 検証
+        assert_eq!(segment.source_port(), src_port);
+        assert_eq!(segment.destination_port(), dst_port);
+        assert_eq!(segment.sequence_number(), seq);
+        assert!(segment.is_syn());
+        assert!(!segment.is_ack());
     }
 }
