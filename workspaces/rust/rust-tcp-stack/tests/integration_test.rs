@@ -193,3 +193,114 @@ fn 構築とパースの往復で同じになる() {
     assert_eq!(tcp_packet.sequence_number(), original_seq);
     assert!(tcp_packet.is_syn());
 }
+
+#[test]
+fn threewayハンドシェイクをシミュレートできる() {
+    let client_mac = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+    let server_mac = MacAddress::new([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
+    let client_ip = Ipv4Addr::new(192, 168, 1, 100);
+    let server_ip = Ipv4Addr::new(192, 168, 1, 1);
+    let client_port = 54321;
+    let server_port = 80;
+
+    // Step 1: クライアント → サーバー (SYN)
+    let syn_packet = create_full_packet(
+        client_mac,
+        server_mac,
+        client_ip,
+        server_ip,
+        client_port,
+        server_port,
+        1000,  // Seq
+        0,     // Ack
+        TcpFlags::SYN,
+    );
+
+    // パース
+    let eth = EthernetFrame::new(&syn_packet).unwrap();
+    let ip = Ipv4Packet::new(eth.payload()).unwrap();
+    let tcp = TcpPacket::new(ip.payload()).unwrap();
+
+    assert!(tcp.is_syn());
+    assert!(!tcp.is_ack());
+    assert_eq!(tcp.sequence_number(), 1000);
+
+    // Step 2: サーバー → クライアント (SYN-ACK)
+    let syn_ack_packet = create_full_packet(
+        server_mac,
+        client_mac,
+        server_ip,
+        client_ip,
+        server_port,
+        client_port,
+        2000,  // Seq
+        1001,  // Ack (クライアントのSeq + 1)
+        TcpFlags::SYN_ACK,
+    );
+
+    let eth = EthernetFrame::new(&syn_ack_packet).unwrap();
+    let ip = Ipv4Packet::new(eth.payload()).unwrap();
+    let tcp = TcpPacket::new(ip.payload()).unwrap();
+
+    assert!(tcp.is_syn());
+    assert!(tcp.is_ack());
+    assert_eq!(tcp.sequence_number(), 2000);
+    assert_eq!(tcp.acknowledgment_number(), 1001);
+
+    // Step 3: クライアント → サーバー (ACK)
+    let ack_packet = create_full_packet(
+        client_mac,
+        server_mac,
+        client_ip,
+        server_ip,
+        client_port,
+        server_port,
+        1001,  // Seq (前回のSeq + 1)
+        2001,  // Ack (サーバーのSeq + 1)
+        TcpFlags::ACK,
+    );
+
+    let eth = EthernetFrame::new(&ack_packet).unwrap();
+    let ip = Ipv4Packet::new(eth.payload()).unwrap();
+    let tcp = TcpPacket::new(ip.payload()).unwrap();
+
+    assert!(!tcp.is_syn());
+    assert!(tcp.is_ack());
+    assert_eq!(tcp.sequence_number(), 1001);
+    assert_eq!(tcp.acknowledgment_number(), 2001);
+}
+
+// ヘルパー関数
+fn create_full_packet(
+    src_mac: MacAddress,
+    dst_mac: MacAddress,
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
+    src_port: u16,
+    dst_port: u16,
+    seq: u32,
+    ack: u32,
+    flags: TcpFlags,
+) -> Vec<u8> {
+    let tcp_segment = TcpPacketBuilder::new()
+        .source_port(src_port)
+        .destination_port(dst_port)
+        .sequence_number(seq)
+        .acknowledgment_number(ack)
+        .flags(flags)
+        .build_with_checksum(src_ip, dst_ip);
+
+    let ipv4_packet = Ipv4PacketBuilder::new()
+        .source(src_ip)
+        .destination(dst_ip)
+        .protocol(IpProtocol::Tcp)
+        .payload(&tcp_segment)
+        .build();
+
+    EthernetFrameBuilder::new()
+        .source(src_mac)
+        .destination(dst_mac)
+        .ether_type(EtherType::Ipv4)
+        .payload(&ipv4_packet)
+        .build()
+}
