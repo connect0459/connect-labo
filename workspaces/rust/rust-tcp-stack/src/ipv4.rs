@@ -30,6 +30,89 @@ pub fn calculate_ipv4_checksum(header: &[u8]) -> u16 {
     !(sum as u16)
 }
 
+pub struct Ipv4PacketBuilder {
+    source: Ipv4Addr,
+    destination: Ipv4Addr,
+    protocol: IpProtocol,
+    ttl: u8,
+    payload: Vec<u8>,
+}
+
+impl Ipv4PacketBuilder {
+    pub fn new() -> Self {
+        Ipv4PacketBuilder {
+            source: Ipv4Addr::new(0, 0, 0, 0),
+            destination: Ipv4Addr::new(0, 0, 0, 0),
+            protocol: IpProtocol::Tcp,
+            ttl: 64,
+            payload: Vec::new(),
+        }
+    }
+
+    pub fn source(mut self, ip: Ipv4Addr) -> Self {
+        self.source = ip;
+        self
+    }
+
+    pub fn destination(mut self, ip: Ipv4Addr) -> Self {
+        self.destination = ip;
+        self
+    }
+
+    pub fn protocol(mut self, protocol: IpProtocol) -> Self {
+        self.protocol = protocol;
+        self
+    }
+
+    pub fn ttl(mut self, ttl: u8) -> Self {
+        self.ttl = ttl;
+        self
+    }
+
+    pub fn payload(mut self, data: &[u8]) -> Self {
+        self.payload = data.to_vec();
+        self
+    }
+
+    pub fn build(self) -> Vec<u8> {
+        let total_length = 20 + self.payload.len();
+        let mut bytes = vec![0u8; total_length];
+
+        // Version (4) + IHL (5)
+        bytes[0] = 0x45;
+
+        // Total Length
+        bytes[2..4].copy_from_slice(&(total_length as u16).to_be_bytes());
+
+        // TTL
+        bytes[8] = self.ttl;
+
+        // Protocol
+        let protocol_value = match self.protocol {
+            IpProtocol::Icmp => 1,
+            IpProtocol::Tcp => 6,
+            IpProtocol::Udp => 17,
+            IpProtocol::Unknown(v) => v,
+        };
+        bytes[9] = protocol_value;
+
+        // Source IP
+        bytes[12..16].copy_from_slice(&self.source.octets());
+
+        // Destination IP
+        bytes[16..20].copy_from_slice(&self.destination.octets());
+
+        // Checksum計算（10-11バイト目は0のまま）
+        let checksum = super::ipv4::calculate_ipv4_checksum(&bytes[..20]);
+        bytes[10..12].copy_from_slice(&checksum.to_be_bytes());
+
+        // Payload
+        bytes[20..].copy_from_slice(&self.payload);
+
+        bytes
+    }
+}
+
 pub struct Ipv4Packet<'a> {
     data: &'a [u8],
 }
@@ -201,5 +284,28 @@ mod tests {
         // パケットを作成して検証
         let packet = Ipv4Packet::new(&data).unwrap();
         assert!(!packet.verify_checksum());
+    }
+
+    #[test]
+    fn ipv4パケットを構築できる() {
+        let src_ip = Ipv4Addr::new(192, 168, 1, 1);
+        let dst_ip = Ipv4Addr::new(192, 168, 1, 2);
+        let payload = b"Hello, IPv4!";
+
+        let packet_bytes = Ipv4PacketBuilder::new()
+            .source(src_ip)
+            .destination(dst_ip)
+            .protocol(IpProtocol::Tcp)
+            .payload(payload)
+            .build();
+
+        // パース
+        let packet = Ipv4Packet::new(&packet_bytes).unwrap();
+
+        // 検証
+        assert_eq!(packet.source(), src_ip);
+        assert_eq!(packet.destination(), dst_ip);
+        assert_eq!(packet.protocol(), IpProtocol::Tcp);
+        assert_eq!(packet.payload(), payload);
     }
 }
