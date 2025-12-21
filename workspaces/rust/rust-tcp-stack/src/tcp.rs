@@ -25,6 +25,22 @@ impl<'a> TcpPacket<'a> {
     pub fn acknowledgment_number(&self) -> u32 {
         u32::from_be_bytes([self.data[8], self.data[9], self.data[10], self.data[11]])
     }
+
+    pub fn is_syn(&self) -> bool {
+        (self.data[13] & 0x02) != 0
+    }
+
+    pub fn is_ack(&self) -> bool {
+        (self.data[13] & 0x10) != 0
+    }
+
+    pub fn is_fin(&self) -> bool {
+        (self.data[13] & 0x01) != 0
+    }
+
+    pub fn is_rst(&self) -> bool {
+        (self.data[13] & 0x04) != 0
+    }
 }
 
 #[cfg(test)]
@@ -73,5 +89,44 @@ mod tests {
 
         let packet = TcpPacket::new(&data).unwrap();
         assert_eq!(packet.acknowledgment_number(), 201);
+    }
+
+    #[test]
+    fn synフラグを判定できる() {
+        let mut data = [0u8; 20];
+        data[13] = 0x02; // SYNフラグ
+
+        let packet = TcpPacket::new(&data).unwrap();
+        assert!(packet.is_syn());
+        assert!(!packet.is_ack());
+    }
+
+    #[test]
+    fn ackフラグを判定できる() {
+        let mut data = [0u8; 20];
+        data[13] = 0x10; // ACKフラグ
+
+        let packet = TcpPacket::new(&data).unwrap();
+        assert!(packet.is_ack());
+        assert!(!packet.is_syn());
+    }
+
+    #[test]
+    fn syn_ackフラグを判定できる() {
+        let mut data = [0u8; 20];
+        data[13] = 0x12; // SYN + ACKフラグ
+
+        let packet = TcpPacket::new(&data).unwrap();
+        assert!(packet.is_syn());
+        assert!(packet.is_ack());
+    }
+
+    #[test]
+    fn finフラグを判定できる() {
+        let mut data = [0u8; 20];
+        data[13] = 0x01; // FINフラグ
+
+        let packet = TcpPacket::new(&data).unwrap();
+        assert!(packet.is_fin());
     }
 }
