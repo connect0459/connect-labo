@@ -145,3 +145,51 @@ fn スタック全体を構築できる() {
     assert_eq!(tcp_packet.destination_port(), 80);
     assert!(tcp_packet.is_syn());
 }
+
+#[test]
+fn 構築とパースの往復で同じになる() {
+    let original_src_mac = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+    let original_dst_mac = MacAddress::new([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
+    let original_src_ip = Ipv4Addr::new(10, 0, 0, 1);
+    let original_dst_ip = Ipv4Addr::new(10, 0, 0, 2);
+    let original_src_port = 54321;
+    let original_dst_port = 443;
+    let original_seq = 99999;
+
+    // 構築
+    let tcp_segment = TcpPacketBuilder::new()
+        .source_port(original_src_port)
+        .destination_port(original_dst_port)
+        .sequence_number(original_seq)
+        .flags(TcpFlags::SYN)
+        .build_with_checksum(original_src_ip, original_dst_ip);
+
+    let ipv4_packet = Ipv4PacketBuilder::new()
+        .source(original_src_ip)
+        .destination(original_dst_ip)
+        .protocol(IpProtocol::Tcp)
+        .payload(&tcp_segment)
+        .build();
+
+    let ethernet_frame = EthernetFrameBuilder::new()
+        .source(original_src_mac)
+        .destination(original_dst_mac)
+        .ether_type(EtherType::Ipv4)
+        .payload(&ipv4_packet)
+        .build();
+
+    // パース
+    let eth_frame = EthernetFrame::new(&ethernet_frame).unwrap();
+    let ip_packet = Ipv4Packet::new(eth_frame.payload()).unwrap();
+    let tcp_packet = TcpPacket::new(ip_packet.payload()).unwrap();
+
+    // 検証: すべての値が元と一致
+    assert_eq!(eth_frame.source(), original_src_mac);
+    assert_eq!(eth_frame.destination(), original_dst_mac);
+    assert_eq!(ip_packet.source(), original_src_ip);
+    assert_eq!(ip_packet.destination(), original_dst_ip);
+    assert_eq!(tcp_packet.source_port(), original_src_port);
+    assert_eq!(tcp_packet.destination_port(), original_dst_port);
+    assert_eq!(tcp_packet.sequence_number(), original_seq);
+    assert!(tcp_packet.is_syn());
+}
