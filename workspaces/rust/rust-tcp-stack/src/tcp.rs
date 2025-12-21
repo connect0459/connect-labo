@@ -45,6 +45,16 @@ impl<'a> TcpPacket<'a> {
     pub fn window_size(&self) -> u16 {
         u16::from_be_bytes([self.data[14], self.data[15]])
     }
+
+    pub fn header_length(&self) -> usize {
+        let data_offset = (self.data[12] >> 4) as usize;
+        data_offset * 4
+    }
+
+    pub fn payload(&self) -> &[u8] {
+        let header_len = self.header_length();
+        &self.data[header_len..]
+    }
 }
 
 #[cfg(test)]
@@ -135,12 +145,22 @@ mod tests {
     }
 
     #[test]
-fn ウィンドウサイズを取得できる() {
-    let mut data = [0u8; 20];
-    data[14] = 0xff;
-    data[15] = 0xff; // 65535
+    fn ウィンドウサイズを取得できる() {
+        let mut data = [0u8; 20];
+        data[14] = 0xff;
+        data[15] = 0xff; // 65535
 
-    let packet = TcpPacket::new(&data).unwrap();
-    assert_eq!(packet.window_size(), 65535);
-}
+        let packet = TcpPacket::new(&data).unwrap();
+        assert_eq!(packet.window_size(), 65535);
+    }
+
+    #[test]
+    fn ペイロードを取得できる() {
+        let mut data = vec![0u8; 30];
+        data[12] = 0x50; // Data Offset = 5 (20バイト)
+        data[20..30].copy_from_slice(b"HelloWorld");
+
+        let packet = TcpPacket::new(&data).unwrap();
+        assert_eq!(packet.payload(), b"HelloWorld");
+    }
 }
