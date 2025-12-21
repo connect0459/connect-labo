@@ -99,3 +99,49 @@ fn スタック全体をパースできる() {
     assert_eq!(tcp_packet.sequence_number(), 1000);
     assert!(tcp_packet.is_syn());
 }
+
+#[test]
+fn スタック全体を構築できる() {
+    let src_mac = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+    let dst_mac = MacAddress::broadcast();
+    let src_ip = Ipv4Addr::new(192, 168, 1, 1);
+    let dst_ip = Ipv4Addr::new(192, 168, 1, 2);
+
+    // TCP SYNセグメント
+    let tcp_segment = TcpPacketBuilder::new()
+        .source_port(12345)
+        .destination_port(80)
+        .sequence_number(1000)
+        .flags(TcpFlags::SYN)
+        .build_with_checksum(src_ip, dst_ip);
+
+    // IPv4パケット
+    let ipv4_packet = Ipv4PacketBuilder::new()
+        .source(src_ip)
+        .destination(dst_ip)
+        .protocol(IpProtocol::Tcp)
+        .payload(&tcp_segment)
+        .build();
+
+    // Ethernetフレーム
+    let ethernet_frame = EthernetFrameBuilder::new()
+        .source(src_mac)
+        .destination(dst_mac)
+        .ether_type(EtherType::Ipv4)
+        .payload(&ipv4_packet)
+        .build();
+
+    // パースして検証
+    let eth_frame = EthernetFrame::new(&ethernet_frame).unwrap();
+    assert_eq!(eth_frame.destination(), dst_mac);
+    assert_eq!(eth_frame.source(), src_mac);
+
+    let ip_packet = Ipv4Packet::new(eth_frame.payload()).unwrap();
+    assert_eq!(ip_packet.source(), src_ip);
+    assert_eq!(ip_packet.destination(), dst_ip);
+
+    let tcp_packet = TcpPacket::new(ip_packet.payload()).unwrap();
+    assert_eq!(tcp_packet.source_port(), 12345);
+    assert_eq!(tcp_packet.destination_port(), 80);
+    assert!(tcp_packet.is_syn());
+}
