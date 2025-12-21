@@ -212,21 +212,44 @@ mod tests {
         assert_eq!(frame.payload(), b"Hello!");
     }
 
-#[test]
-fn ethernetフレームを構築できる() {
-    let src = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
-    let dst = MacAddress::broadcast();
+    #[test]
+    fn ethernetフレームを構築できる() {
+        let src = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+        let dst = MacAddress::broadcast();
 
-    let builder = EthernetFrameBuilder::new()
-        .destination(dst)
-        .source(src)
-        .ether_type(EtherType::Ipv4);
+        let builder = EthernetFrameBuilder::new()
+            .destination(dst)
+            .source(src)
+            .ether_type(EtherType::Ipv4);
 
-    let frame_bytes = builder.build();
+        let frame_bytes = builder.build();
 
-    assert_eq!(frame_bytes.len(), 14);
-    assert_eq!(&frame_bytes[0..6], &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
-    assert_eq!(&frame_bytes[6..12], &[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
-    assert_eq!(&frame_bytes[12..14], &[0x08, 0x00]); // IPv4
-}
+        assert_eq!(frame_bytes.len(), 14);
+        assert_eq!(&frame_bytes[0..6], &[0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
+        assert_eq!(&frame_bytes[6..12], &[0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+        assert_eq!(&frame_bytes[12..14], &[0x08, 0x00]); // IPv4
+    }
+
+    #[test]
+    fn ビルドしたフレームをパースできる() {
+        let src = MacAddress::new([0x00, 0x11, 0x22, 0x33, 0x44, 0x55]);
+        let dst = MacAddress::new([0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
+        let payload = b"Hello, Ethernet!";
+
+        let frame_bytes = EthernetFrameBuilder::new()
+            .destination(dst)
+            .source(src)
+            .ether_type(EtherType::Ipv4)
+            .payload(payload)
+            .build();
+
+        // パース
+        let frame = EthernetFrame::new(&frame_bytes).unwrap();
+
+        // 検証
+        assert_eq!(frame.destination(), dst);
+        assert_eq!(frame.source(), src);
+        assert_eq!(frame.ether_type(), EtherType::Ipv4);
+        assert_eq!(frame.payload(), payload);
+    }
 }
