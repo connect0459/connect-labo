@@ -41,6 +41,10 @@ impl<'a> TcpPacket<'a> {
     pub fn is_rst(&self) -> bool {
         (self.data[13] & 0x04) != 0
     }
+
+    pub fn window_size(&self) -> u16 {
+        u16::from_be_bytes([self.data[14], self.data[15]])
+    }
 }
 
 #[cfg(test)]
@@ -129,4 +133,14 @@ mod tests {
         let packet = TcpPacket::new(&data).unwrap();
         assert!(packet.is_fin());
     }
+
+    #[test]
+fn ウィンドウサイズを取得できる() {
+    let mut data = [0u8; 20];
+    data[14] = 0xff;
+    data[15] = 0xff; // 65535
+
+    let packet = TcpPacket::new(&data).unwrap();
+    assert_eq!(packet.window_size(), 65535);
+}
 }
