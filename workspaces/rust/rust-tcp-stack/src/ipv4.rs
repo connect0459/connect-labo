@@ -103,7 +103,7 @@ impl Ipv4PacketBuilder {
         bytes[16..20].copy_from_slice(&self.destination.octets());
 
         // Checksum計算（10-11バイト目は0のまま）
-        let checksum = super::ipv4::calculate_ipv4_checksum(&bytes[..20]);
+        let checksum = calculate_ipv4_checksum(&bytes[..20]);
         bytes[10..12].copy_from_slice(&checksum.to_be_bytes());
 
         // Payload

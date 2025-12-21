@@ -183,7 +183,7 @@ impl TcpPacketBuilder {
         let mut bytes = self.build();
 
         // チェックサム計算
-        let checksum = super::tcp::calculate_tcp_checksum(&bytes, src_ip, dst_ip);
+        let checksum = calculate_tcp_checksum(&bytes, src_ip, dst_ip);
         bytes[16..18].copy_from_slice(&checksum.to_be_bytes());
 
         bytes
