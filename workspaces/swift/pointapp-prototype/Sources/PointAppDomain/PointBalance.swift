@@ -83,16 +83,36 @@ public struct PointBalance: Equatable, Sendable {
     public mutating func removeExpired(at date: Date = .now) {
         entries.removeAll { $0.expiresAt <= date }
     }
+
+    /// 指定日時より前に期限切れになるエントリを取得（期限切れ除く）
+    public func entries(expiringSoonBefore deadline: Date, at date: Date = .now) -> [ExpiringPointEntry] {
+        entries
+            .filter { $0.expiresAt > date && $0.expiresAt <= deadline && $0.remainingAmount.value > 0 }
+            .map { ExpiringPointEntry(amount: $0.remainingAmount, expiresAt: $0.expiresAt) }
+    }
 }
 
 // MARK: - PointEntry
 
-/// 個々のポイント獲得記録
+/// 個々のポイント獲得記録（内部用）
 struct PointEntry: Equatable, Sendable {
     let originalAmount: PointAmount
     var remainingAmount: PointAmount
     let expiresAt: Date
     let createdAt: Date
+}
+
+// MARK: - ExpiringPointEntry
+
+/// 期限切れ間近のポイントエントリ（公開用）
+public struct ExpiringPointEntry: Equatable, Sendable {
+    public let amount: PointAmount
+    public let expiresAt: Date
+
+    public init(amount: PointAmount, expiresAt: Date) {
+        self.amount = amount
+        self.expiresAt = expiresAt
+    }
 }
 
 // MARK: - PointBalanceError
