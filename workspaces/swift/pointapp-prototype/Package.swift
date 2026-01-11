@@ -5,24 +5,17 @@ let package = Package(
     name: "PointAppPrototype",
     platforms: [
         .iOS(.v17),
-        .macOS(.v14)  // swift testをmacOSで実行するため
+        .macOS(.v14)
     ],
     products: [
-        .library(
-            name: "PointAppPrototype",
-            targets: ["PointAppPrototype"]
-        ),
-        // ドメインロジックのみ（Pure Swift）- CLIテスト用
+        // ドメインロジックのみ（Pure Swift）
         .library(
             name: "PointAppDomain",
             targets: ["PointAppDomain"]
         )
     ],
     dependencies: [
-        .package(
-            url: "https://github.com/pointfreeco/swift-composable-architecture",
-            from: "1.15.0"
-        )
+        // TCAは後でアプリ層で使用
     ],
     targets: [
         // ドメイン層（Pure Swift - UIに依存しない）
@@ -32,31 +25,11 @@ let package = Package(
             path: "Sources/PointAppDomain"
         ),
 
-        // アプリ全体（SwiftUI依存）
-        .target(
-            name: "PointAppPrototype",
-            dependencies: [
-                "PointAppDomain",
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
-            ],
-            path: "Sources/PointAppPrototype"
-        ),
-
         // ドメインテスト（Swift Testing）
         .testTarget(
             name: "PointAppDomainTests",
             dependencies: ["PointAppDomain"],
             path: "Tests/PointAppDomainTests"
-        ),
-
-        // TCA Feature テスト
-        .testTarget(
-            name: "PointAppPrototypeTests",
-            dependencies: [
-                "PointAppPrototype",
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
-            ],
-            path: "Tests/PointAppPrototypeTests"
         )
     ]
 )

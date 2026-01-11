@@ -130,6 +130,19 @@ extension Survey {
     }
 }
 
+// MARK: - ScaleLabels
+
+/// スケール質問のラベル
+public struct ScaleLabels: Equatable, Sendable {
+    public let min: String
+    public let max: String
+
+    public init(min: String, max: String) {
+        self.min = min
+        self.max = max
+    }
+}
+
 // MARK: - SurveyQuestion
 
 /// アンケートの質問
@@ -144,7 +157,7 @@ public enum SurveyQuestion: Equatable, Sendable {
     case freeText(text: String, maxLength: Int?)
 
     /// スケール（1-5, 1-10など）
-    case scale(text: String, min: Int, max: Int, labels: (min: String, max: String)?)
+    case scale(text: String, min: Int, max: Int, labels: ScaleLabels?)
 
     /// 質問テキスト
     public var text: String {
