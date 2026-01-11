@@ -1,33 +1,38 @@
-import XCTest
+import Testing
+import Foundation
 @testable import PointAppDomain
 
 /// Survey（アンケート）のテスト
 /// ビジネスルール: アンケートは期限があり、報酬効率（pt/分）で評価できる
-final class SurveyTests: XCTestCase {
+@Suite("Survey Tests")
+struct SurveyTests {
 
     // MARK: - 利用可能判定
 
-    func test_期限内のアンケートは回答可能() throws {
+    @Test("期限内のアンケートは回答可能")
+    func availableWhenNotExpired() throws {
         // Arrange
         let futureDate = Date().addingTimeInterval(86400) // 24時間後
         let survey = try Survey.fixture(expiresAt: futureDate)
 
         // Act & Assert
-        XCTAssertTrue(survey.isAvailable())
+        #expect(survey.isAvailable())
     }
 
-    func test_期限切れのアンケートは回答不可() throws {
+    @Test("期限切れのアンケートは回答不可")
+    func unavailableWhenExpired() throws {
         // Arrange
         let pastDate = Date().addingTimeInterval(-3600) // 1時間前
         let survey = try Survey.fixture(expiresAt: pastDate)
 
         // Act & Assert
-        XCTAssertFalse(survey.isAvailable())
+        #expect(!survey.isAvailable())
     }
 
     // MARK: - 報酬効率
 
-    func test_報酬効率を計算できる() throws {
+    @Test("報酬効率を計算できる")
+    func calculateRewardEfficiency() throws {
         // Arrange: 100pt / 5分 = 20pt/分
         let survey = try Survey.fixture(
             reward: PointAmount(100),
@@ -38,10 +43,11 @@ final class SurveyTests: XCTestCase {
         let efficiency = survey.rewardEfficiency()
 
         // Assert
-        XCTAssertEqual(efficiency, 20.0)
+        #expect(efficiency == 20.0)
     }
 
-    func test_所要時間が0の場合は効率0() throws {
+    @Test("所要時間が0の場合は効率0")
+    func zeroEfficiencyWhenZeroMinutes() throws {
         // Arrange
         let survey = try Survey.fixture(
             reward: PointAmount(100),
@@ -52,10 +58,11 @@ final class SurveyTests: XCTestCase {
         let efficiency = survey.rewardEfficiency()
 
         // Assert
-        XCTAssertEqual(efficiency, 0)
+        #expect(efficiency == 0)
     }
 
-    func test_高効率アンケートを判定できる() throws {
+    @Test("高効率アンケートを判定できる")
+    func determineHighEfficiency() throws {
         // Arrange
         let highEfficiency = try Survey.fixture(
             reward: PointAmount(100),
@@ -67,13 +74,14 @@ final class SurveyTests: XCTestCase {
         )
 
         // Assert
-        XCTAssertTrue(highEfficiency.isHighEfficiency())
-        XCTAssertFalse(lowEfficiency.isHighEfficiency())
+        #expect(highEfficiency.isHighEfficiency())
+        #expect(!lowEfficiency.isHighEfficiency())
     }
 
     // MARK: - 残り時間
 
-    func test_残り時間を取得できる() throws {
+    @Test("残り時間を取得できる")
+    func getRemainingTime() throws {
         // Arrange
         let futureDate = Date().addingTimeInterval(7200) // 2時間後
         let survey = try Survey.fixture(expiresAt: futureDate)
@@ -82,12 +90,13 @@ final class SurveyTests: XCTestCase {
         let remaining = survey.remainingTime()
 
         // Assert
-        XCTAssertNotNil(remaining)
-        XCTAssertGreaterThan(remaining!, 7000) // 約2時間
-        XCTAssertLessThan(remaining!, 7300)
+        #expect(remaining != nil)
+        #expect(remaining! > 7000) // 約2時間
+        #expect(remaining! < 7300)
     }
 
-    func test_期限切れの場合は残り時間nil() throws {
+    @Test("期限切れの場合は残り時間nil")
+    func nilRemainingTimeWhenExpired() throws {
         // Arrange
         let pastDate = Date().addingTimeInterval(-3600)
         let survey = try Survey.fixture(expiresAt: pastDate)
@@ -96,15 +105,17 @@ final class SurveyTests: XCTestCase {
         let remaining = survey.remainingTime()
 
         // Assert
-        XCTAssertNil(remaining)
+        #expect(remaining == nil)
     }
 }
 
 // MARK: - SurveyQuestion Tests
 
-final class SurveyQuestionTests: XCTestCase {
+@Suite("SurveyQuestion Tests")
+struct SurveyQuestionTests {
 
-    func test_単一選択の質問を作成できる() {
+    @Test("単一選択の質問を作成できる")
+    func createSingleChoice() {
         // Act
         let question = SurveyQuestion.singleChoice(
             text: "満足度は？",
@@ -112,15 +123,16 @@ final class SurveyQuestionTests: XCTestCase {
         )
 
         // Assert
-        XCTAssertEqual(question.text, "満足度は？")
+        #expect(question.text == "満足度は？")
         if case .singleChoice(_, let choices) = question {
-            XCTAssertEqual(choices, ["高", "中", "低"])
+            #expect(choices == ["高", "中", "低"])
         } else {
-            XCTFail("Expected singleChoice")
+            Issue.record("Expected singleChoice")
         }
     }
 
-    func test_複数選択の質問を作成できる() {
+    @Test("複数選択の質問を作成できる")
+    func createMultipleChoice() {
         // Act
         let question = SurveyQuestion.multipleChoice(
             text: "好きな色は？",
@@ -129,16 +141,17 @@ final class SurveyQuestionTests: XCTestCase {
         )
 
         // Assert
-        XCTAssertEqual(question.text, "好きな色は？")
+        #expect(question.text == "好きな色は？")
         if case .multipleChoice(_, let choices, let max) = question {
-            XCTAssertEqual(choices, ["赤", "青", "緑"])
-            XCTAssertEqual(max, 2)
+            #expect(choices == ["赤", "青", "緑"])
+            #expect(max == 2)
         } else {
-            XCTFail("Expected multipleChoice")
+            Issue.record("Expected multipleChoice")
         }
     }
 
-    func test_自由記述の質問を作成できる() {
+    @Test("自由記述の質問を作成できる")
+    func createFreeText() {
         // Act
         let question = SurveyQuestion.freeText(
             text: "ご意見をお聞かせください",
@@ -146,10 +159,11 @@ final class SurveyQuestionTests: XCTestCase {
         )
 
         // Assert
-        XCTAssertEqual(question.text, "ご意見をお聞かせください")
+        #expect(question.text == "ご意見をお聞かせください")
     }
 
-    func test_スケールの質問を作成できる() {
+    @Test("スケールの質問を作成できる")
+    func createScale() {
         // Act
         let question = SurveyQuestion.scale(
             text: "満足度を10点満点で",
@@ -159,35 +173,38 @@ final class SurveyQuestionTests: XCTestCase {
         )
 
         // Assert
-        XCTAssertEqual(question.text, "満足度を10点満点で")
+        #expect(question.text == "満足度を10点満点で")
     }
 }
 
 // MARK: - SurveyAnswer Tests
 
-final class SurveyAnswerTests: XCTestCase {
+@Suite("SurveyAnswer Tests")
+struct SurveyAnswerTests {
 
-    func test_単一選択の回答を作成できる() {
+    @Test("単一選択の回答を作成できる")
+    func createSingleChoiceAnswer() {
         // Act
         let answer = SurveyAnswer.singleChoice("高")
 
         // Assert
         if case .singleChoice(let selected) = answer {
-            XCTAssertEqual(selected, "高")
+            #expect(selected == "高")
         } else {
-            XCTFail("Expected singleChoice")
+            Issue.record("Expected singleChoice")
         }
     }
 
-    func test_複数選択の回答を作成できる() {
+    @Test("複数選択の回答を作成できる")
+    func createMultipleChoiceAnswer() {
         // Act
         let answer = SurveyAnswer.multipleChoice(["赤", "青"])
 
         // Assert
         if case .multipleChoice(let selected) = answer {
-            XCTAssertEqual(selected, ["赤", "青"])
+            #expect(selected == ["赤", "青"])
         } else {
-            XCTFail("Expected multipleChoice")
+            Issue.record("Expected multipleChoice")
         }
     }
 }

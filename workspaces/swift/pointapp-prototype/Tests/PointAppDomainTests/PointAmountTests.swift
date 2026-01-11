@@ -1,38 +1,43 @@
-import XCTest
+import Testing
 @testable import PointAppDomain
 
 /// PointAmount（ポイント金額）のテスト
 /// ビジネスルール：ポイントは0以上の整数、10pt = 1円
-final class PointAmountTests: XCTestCase {
+@Suite("PointAmount Tests")
+struct PointAmountTests {
 
     // MARK: - 生成
 
-    func test_正の値でPointAmountを作成できる() throws {
+    @Test("正の値でPointAmountを作成できる")
+    func createWithPositiveValue() throws {
         // Act
         let points = try PointAmount(100)
 
         // Assert
-        XCTAssertEqual(points.value, 100)
+        #expect(points.value == 100)
     }
 
-    func test_ゼロでPointAmountを作成できる() throws {
+    @Test("ゼロでPointAmountを作成できる")
+    func createWithZero() throws {
         // Act
         let points = try PointAmount(0)
 
         // Assert
-        XCTAssertEqual(points.value, 0)
+        #expect(points.value == 0)
     }
 
-    func test_負の値の場合はエラー() {
+    @Test("負の値の場合はエラー")
+    func throwsErrorForNegativeValue() {
         // Act & Assert
-        XCTAssertThrowsError(try PointAmount(-1)) { error in
-            XCTAssertEqual(error as? PointAmountError, .negativeValue)
+        #expect(throws: PointAmountError.negativeValue) {
+            try PointAmount(-1)
         }
     }
 
     // MARK: - 円換算
 
-    func test_10ポイントは1円で換算できる() throws {
+    @Test("10ポイントは1円で換算できる")
+    func convertToYen() throws {
         // Arrange
         let points = try PointAmount(100)
 
@@ -40,10 +45,11 @@ final class PointAmountTests: XCTestCase {
         let yen = points.toYen()
 
         // Assert
-        XCTAssertEqual(yen, 10) // 100pt = 10円
+        #expect(yen == 10) // 100pt = 10円
     }
 
-    func test_端数を含む円換算ができる() throws {
+    @Test("端数を含む円換算ができる")
+    func convertToYenWithFraction() throws {
         // Arrange
         let points = try PointAmount(15)
 
@@ -51,12 +57,13 @@ final class PointAmountTests: XCTestCase {
         let yen = points.toYen()
 
         // Assert
-        XCTAssertEqual(yen, 1.5) // 15pt = 1.5円
+        #expect(yen == 1.5) // 15pt = 1.5円
     }
 
     // MARK: - 加算
 
-    func test_2つのPointAmountを加算できる() throws {
+    @Test("2つのPointAmountを加算できる")
+    func addTwoPointAmounts() throws {
         // Arrange
         let points1 = try PointAmount(100)
         let points2 = try PointAmount(50)
@@ -65,25 +72,28 @@ final class PointAmountTests: XCTestCase {
         let result = points1.adding(points2)
 
         // Assert
-        XCTAssertEqual(result.value, 150)
+        #expect(result.value == 150)
     }
 
     // MARK: - 比較
 
-    func test_2つのPointAmountを比較できる() throws {
+    @Test("2つのPointAmountを比較できる")
+    func compareTwoPointAmounts() throws {
         // Arrange
         let smaller = try PointAmount(50)
         let larger = try PointAmount(100)
+        let anotherFifty = try PointAmount(50)
 
         // Assert
-        XCTAssertTrue(smaller < larger)
-        XCTAssertTrue(larger > smaller)
-        XCTAssertEqual(smaller, try PointAmount(50))
+        #expect(smaller < larger)
+        #expect(larger > smaller)
+        #expect(smaller == anotherFifty)
     }
 
     // MARK: - 表示
 
-    func test_円表示の文字列を取得できる() throws {
+    @Test("円表示の文字列を取得できる")
+    func getYenString() throws {
         // Arrange
         let points = try PointAmount(1234)
 
@@ -91,6 +101,6 @@ final class PointAmountTests: XCTestCase {
         let yenString = points.toYenString()
 
         // Assert
-        XCTAssertEqual(yenString, "123.4円")
+        #expect(yenString == "123.4円")
     }
 }
