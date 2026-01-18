@@ -55,8 +55,6 @@
       "Read(.env.example)"
     ],
     "deny": [
-      "Bash(curl:*)",
-      "Bash(rm:*)",
       "Bash(rm -rf:*)",
       "Bash(sudo:*)",
       "Bash(wget:*)",
@@ -75,6 +73,10 @@
       "Write(.env.local*)",
       "Write(.env.prod*)",
       "Write(.env.stag*)"
+    ],
+    "ask": [
+      "Bash(curl:*)",
+      "Bash(rm:*)"
     ]
   }
 }
