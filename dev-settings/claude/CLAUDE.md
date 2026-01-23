@@ -62,6 +62,8 @@
   - 詳細: `~/.claude/agent-docs/conventions/git-hooks.md`
 - **エラーメッセージ**: 英語で統一
 - **ドキュメント**: TSDoc/Godocで関数・クラス説明（日本語）
+- **記述原則**: コードにHow、テストにWhat、コミットログにWhy、コメントにWhy not
+  - コードコメント規約の詳細: `~/.claude/agent-docs/conventions/code-comments.md`
 
 ### 実装パターン
 
