@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_DIR="${HOME}/.claude"
+export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export TARGET_DIR="${HOME}/.claude"
 
 echo "Claude configuration sync script"
 echo "Source: ${SCRIPT_DIR}"
@@ -35,26 +35,42 @@ rsync -a --delete "${SCRIPT_DIR}/agent-docs/" "${TARGET_DIR}/agent-docs/"
 if [ -f "${SCRIPT_DIR}/settings.json" ]; then
     echo "Syncing permissions from settings.json"
 
-    # Check if jq is available
-    if ! command -v jq &> /dev/null; then
-        echo "Error: jq is not installed. Please install jq to sync permissions."
-        echo "  brew install jq"
+    # Check if python3 is available
+    if ! command -v python3 &> /dev/null; then
+        echo "Error: python3 is not installed. Please install Python 3 to sync permissions."
         exit 1
     fi
 
-    # Extract permissions from source settings.json
-    SOURCE_PERMISSIONS=$(jq '.permissions' "${SCRIPT_DIR}/settings.json")
+    # Merge permissions into target settings.json using Python
+    python3 << 'EOF'
+import json
+import sys
+import os
 
-    if [ -f "${TARGET_DIR}/settings.json" ]; then
-        # Merge permissions into existing settings.json
-        jq --argjson perms "$SOURCE_PERMISSIONS" '.permissions = $perms' \
-            "${TARGET_DIR}/settings.json" > "${TARGET_DIR}/settings.json.tmp"
-        mv "${TARGET_DIR}/settings.json.tmp" "${TARGET_DIR}/settings.json"
-    else
-        # Create new settings.json with only permissions field
-        echo "{}" | jq --argjson perms "$SOURCE_PERMISSIONS" '.permissions = $perms' \
-            > "${TARGET_DIR}/settings.json"
-    fi
+script_dir = os.environ['SCRIPT_DIR']
+target_dir = os.environ['TARGET_DIR']
+
+# Read source permissions
+with open(f"{script_dir}/settings.json", 'r') as f:
+    source = json.load(f)
+    source_permissions = source.get('permissions', {})
+
+# Read or create target settings
+target_file = f"{target_dir}/settings.json"
+if os.path.exists(target_file):
+    with open(target_file, 'r') as f:
+        target = json.load(f)
+else:
+    target = {}
+
+# Merge permissions
+target['permissions'] = source_permissions
+
+# Write back
+with open(target_file, 'w') as f:
+    json.dump(target, f, indent=2)
+    f.write('\n')
+EOF
 fi
 
 echo ""
