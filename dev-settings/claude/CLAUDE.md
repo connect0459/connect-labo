@@ -4,7 +4,7 @@
 
 - Think in English, interact with the user in Japanese.
 
-## 技術スタック（WHAT）
+## 技術スタック
 
 ### 主要言語とフレームワーク
 
@@ -21,14 +21,14 @@
 - Rust: cargo
 - PHP: composer
 
-## 開発哲学（WHY）
+## 開発哲学
 
 - **TDD重視**: デトロイト派（モック最小化、実際のオブジェクト協調）
 - **Evergreen原則**: 長期的価値（WHY > WHAT、ビジネスルール重視）
 - **Rich Domain Objects**: データ + ロジック、getter/setter排除
 - **品質 > 速度**: 持続可能性と保守性を優先
 
-## 実践方法（HOW）
+## 実践方法
 
 ### アーキテクチャ
 
@@ -62,7 +62,8 @@
   - 詳細: `~/.claude/agent-docs/conventions/git-hooks.md`
 - **エラーメッセージ**: 英語で統一
 - **ドキュメント**: TSDoc/Godocで関数・クラス説明（日本語）
-- **記述原則**: コードにHow、テストにWhat、コミットログにWhy、コメントにWhy not
+- **記述原則**: コードにHow、テストにWhat、コミットログにWhy
+- **コードコメント**: **基本的に書かない** 。書く場合はユーザーの明示的な許可が必要
   - コードコメント規約の詳細: `~/.claude/agent-docs/conventions/code-comments.md`
 
 ### 実装パターン
