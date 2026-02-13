@@ -308,7 +308,7 @@ src/services/UserService.tsの42行目でvalidateEmail関数を定義し、
 RFC 5322に準拠したバリデーションを実装し、データ品質を向上させます。
 ```
 
-## Claude Codeでの実践
+## Coding Agentでの実践
 
 ### PR説明ドラフトの依頼
 

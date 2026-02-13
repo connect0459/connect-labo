@@ -123,20 +123,6 @@ git commit -m "tidy: remove unnecessary else clause in getUserName"
 git commit -m "refactor: extract user validation logic to domain service"
 ```
 
-## Claude Code協働時のコミット
-
-Claude Codeがコミットを作成する際は、以下のフォーマットを使用します：
-
-```text
-<type>: <subject>
-
-<body>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
 ## UTF-8エンコーディング検証
 
 コミットメッセージは必ずUTF-8エンコーディングで記述する必要があります。

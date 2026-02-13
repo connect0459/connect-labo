@@ -382,7 +382,7 @@ const OldName = lazy(() => import('./OldName'));  // ← 更新漏れ
  */
 ```
 
-## Claude Codeでの実践
+## Coding Agentでの実践
 
 ### リファクタリング依頼の例
 

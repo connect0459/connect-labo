@@ -4,11 +4,13 @@ set -euo pipefail
 
 # Get script directory
 export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export TARGET_DIR="${HOME}/.claude"
+export CENTRAL_DIR="${HOME}/.connect0459/coding-agents"
+export CLAUDE_TARGET_DIR="${HOME}/.claude"
 
-echo "Claude configuration sync script"
+echo "Coding agents configuration sync script"
 echo "Source: ${SCRIPT_DIR}"
-echo "Target: ${TARGET_DIR}"
+echo "Central: ${CENTRAL_DIR}"
+echo "Claude Target: ${CLAUDE_TARGET_DIR}"
 echo ""
 
 # Check if python3 is available
@@ -63,33 +65,39 @@ EOF
 
 # Calculate checksums before sync
 echo "Calculating checksums before sync..."
-CLAUDE_MD_BEFORE=$(calculate_checksum "${TARGET_DIR}/CLAUDE.md")
-AGENT_DOCS_BEFORE=$(calculate_checksum "${TARGET_DIR}/agent-docs")
-SETTINGS_JSON_BEFORE=$(calculate_checksum "${TARGET_DIR}/settings.json")
+AGENTS_MD_BEFORE=$(calculate_checksum "${CENTRAL_DIR}/AGENTS.md")
+AGENT_DOCS_BEFORE=$(calculate_checksum "${CENTRAL_DIR}/agent-docs")
+CLAUDE_SETTINGS_JSON_BEFORE=$(calculate_checksum "${CLAUDE_TARGET_DIR}/settings.json")
 echo ""
 
-# Create target directory if it does not exist
-if [ ! -d "${TARGET_DIR}" ]; then
-    echo "Creating target directory: ${TARGET_DIR}"
-    mkdir -p "${TARGET_DIR}"
+# Create central directory if it does not exist
+if [ ! -d "${CENTRAL_DIR}" ]; then
+    echo "Creating central directory: ${CENTRAL_DIR}"
+    mkdir -p "${CENTRAL_DIR}"
 fi
 
-# Create agent-docs directory
-if [ ! -d "${TARGET_DIR}/agent-docs" ]; then
-    echo "Creating agent-docs directory"
-    mkdir -p "${TARGET_DIR}/agent-docs"
+# Create agent-docs directory in central location
+if [ ! -d "${CENTRAL_DIR}/agent-docs" ]; then
+    echo "Creating central agent-docs directory"
+    mkdir -p "${CENTRAL_DIR}/agent-docs"
 fi
 
-# Sync CLAUDE.md
-echo "Syncing CLAUDE.md"
-cp "${SCRIPT_DIR}/CLAUDE.md" "${TARGET_DIR}/CLAUDE.md"
+# Create Claude target directory if it does not exist
+if [ ! -d "${CLAUDE_TARGET_DIR}" ]; then
+    echo "Creating Claude target directory: ${CLAUDE_TARGET_DIR}"
+    mkdir -p "${CLAUDE_TARGET_DIR}"
+fi
 
-# Sync agent-docs directory (delete files not in source)
-echo "Syncing agent-docs directory"
-rsync -a --delete "${SCRIPT_DIR}/agent-docs/" "${TARGET_DIR}/agent-docs/"
+# Sync AGENTS.md to central location (physical copy)
+echo "Syncing AGENTS.md to central location"
+cp "${SCRIPT_DIR}/AGENTS.md" "${CENTRAL_DIR}/AGENTS.md"
+
+# Sync agent-docs directory to central location (delete files not in source)
+echo "Syncing agent-docs directory to central location"
+rsync -a --delete "${SCRIPT_DIR}/agent-docs/" "${CENTRAL_DIR}/agent-docs/"
 
 # Sync permissions field from settings.json
-if [ -f "${SCRIPT_DIR}/settings.json" ]; then
+if [ -f "${SCRIPT_DIR}/claude/settings.json" ]; then
     echo "Syncing permissions from settings.json"
 
     # Merge permissions into target settings.json using Python
@@ -99,15 +107,15 @@ import sys
 import os
 
 script_dir = os.environ['SCRIPT_DIR']
-target_dir = os.environ['TARGET_DIR']
+claude_target_dir = os.environ['CLAUDE_TARGET_DIR']
 
 # Read source permissions
-with open(f"{script_dir}/settings.json", 'r') as f:
+with open(f"{script_dir}/claude/settings.json", 'r') as f:
     source = json.load(f)
     source_permissions = source.get('permissions', {})
 
 # Read or create target settings
-target_file = f"{target_dir}/settings.json"
+target_file = f"{claude_target_dir}/settings.json"
 if os.path.exists(target_file):
     with open(target_file, 'r') as f:
         target = json.load(f)
@@ -128,10 +136,11 @@ echo ""
 echo "Sync completed"
 echo ""
 
-# Setup GitHub Copilot CLI symlink
-echo "Setting up GitHub Copilot CLI symlink..."
+# Setup symlinks
+echo "Setting up symlinks..."
+CENTRAL_AGENTS_MD="${CENTRAL_DIR}/AGENTS.md"
+CLAUDE_MD="${CLAUDE_TARGET_DIR}/CLAUDE.md"
 COPILOT_INSTRUCTIONS="${HOME}/.github/copilot-instructions.md"
-CLAUDE_MD="${TARGET_DIR}/CLAUDE.md"
 
 # Create .github directory if it does not exist
 if [ ! -d "${HOME}/.github" ]; then
@@ -139,24 +148,34 @@ if [ ! -d "${HOME}/.github" ]; then
     mkdir -p "${HOME}/.github"
 fi
 
-# Remove existing file or symlink if it exists
+# Setup Claude CLAUDE.md symlink to central AGENTS.md
+if [ -e "${CLAUDE_MD}" ] || [ -L "${CLAUDE_MD}" ]; then
+    echo "Removing existing ${CLAUDE_MD}"
+    rm -f "${CLAUDE_MD}"
+fi
+echo "Creating symlink: ${CLAUDE_MD} -> ${CENTRAL_AGENTS_MD}"
+ln -s "${CENTRAL_AGENTS_MD}" "${CLAUDE_MD}"
+
+# Setup GitHub Copilot instructions symlink to central AGENTS.md
 if [ -e "${COPILOT_INSTRUCTIONS}" ] || [ -L "${COPILOT_INSTRUCTIONS}" ]; then
-    echo "Removing existing copilot-instructions.md"
+    echo "Removing existing ${COPILOT_INSTRUCTIONS}"
     rm -f "${COPILOT_INSTRUCTIONS}"
 fi
-
-# Create symlink
-echo "Creating symlink: ${COPILOT_INSTRUCTIONS} -> ${CLAUDE_MD}"
-ln -s "${CLAUDE_MD}" "${COPILOT_INSTRUCTIONS}"
+echo "Creating symlink: ${COPILOT_INSTRUCTIONS} -> ${CENTRAL_AGENTS_MD}"
+ln -s "${CENTRAL_AGENTS_MD}" "${COPILOT_INSTRUCTIONS}"
 
 echo ""
 
 # Calculate checksums after sync
 echo "Calculating checksums after sync..."
-CLAUDE_MD_AFTER=$(calculate_checksum "${TARGET_DIR}/CLAUDE.md")
-AGENT_DOCS_AFTER=$(calculate_checksum "${TARGET_DIR}/agent-docs")
-SETTINGS_JSON_AFTER=$(calculate_checksum "${TARGET_DIR}/settings.json")
+AGENTS_MD_AFTER=$(calculate_checksum "${CENTRAL_DIR}/AGENTS.md")
+AGENT_DOCS_AFTER=$(calculate_checksum "${CENTRAL_DIR}/agent-docs")
+CLAUDE_SETTINGS_JSON_AFTER=$(calculate_checksum "${CLAUDE_TARGET_DIR}/settings.json")
+CLAUDE_SYMLINK_STATUS="not_checked"
 COPILOT_SYMLINK_STATUS="not_checked"
+if [ -L "${CLAUDE_TARGET_DIR}/CLAUDE.md" ]; then
+    CLAUDE_SYMLINK_STATUS="exists"
+fi
 if [ -L "${HOME}/.github/copilot-instructions.md" ]; then
     COPILOT_SYMLINK_STATUS="exists"
 fi
@@ -169,11 +188,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 has_changes=false
 
-if [ "$CLAUDE_MD_BEFORE" != "$CLAUDE_MD_AFTER" ]; then
-    echo "  ✓ CLAUDE.md (updated)"
+if [ "$AGENTS_MD_BEFORE" != "$AGENTS_MD_AFTER" ]; then
+    echo "  ✓ AGENTS.md (updated)"
     has_changes=true
 else
-    echo "  - CLAUDE.md (no changes)"
+    echo "  - AGENTS.md (no changes)"
 fi
 
 if [ "$AGENT_DOCS_BEFORE" != "$AGENT_DOCS_AFTER" ]; then
@@ -183,13 +202,18 @@ else
     echo "  - agent-docs/ (no changes)"
 fi
 
-if [ -f "${SCRIPT_DIR}/settings.json" ]; then
-    if [ "$SETTINGS_JSON_BEFORE" != "$SETTINGS_JSON_AFTER" ]; then
+if [ -f "${SCRIPT_DIR}/claude/settings.json" ]; then
+    if [ "$CLAUDE_SETTINGS_JSON_BEFORE" != "$CLAUDE_SETTINGS_JSON_AFTER" ]; then
         echo "  ✓ settings.json (updated)"
         has_changes=true
     else
         echo "  - settings.json (no changes)"
     fi
+fi
+
+if [ "$CLAUDE_SYMLINK_STATUS" = "exists" ]; then
+    echo "  ✓ Claude symlink (created)"
+    has_changes=true
 fi
 
 if [ "$COPILOT_SYMLINK_STATUS" = "exists" ]; then

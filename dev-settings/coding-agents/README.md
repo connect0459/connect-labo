@@ -1,66 +1,48 @@
 # Claude設定ファイル
 
-このディレクトリには、Claude Codeの開発規約とガイドラインが含まれています。
-
-## ファイル構成
-
-```text
-dev-settings/claude/
-├── CLAUDE.md                            # メイン設定ファイル
-├── agent-docs/                          # 詳細ドキュメント
-│   ├── architecture/                    # アーキテクチャガイド
-│   │   ├── onion-architecture.md
-│   │   └── package-by-features.md
-│   ├── conventions/                     # コーディング規約
-│   │   ├── code-comments.md
-│   │   ├── commit-messages.md
-│   │   ├── git-hooks.md
-│   │   └── tidyings-vs-refactoring.md
-│   ├── examples/                        # 実装パターン例
-│   │   ├── domain-objects.md
-│   │   └── repository-pattern.md
-│   └── testing/                         # テスト戦略
-│       ├── coverage-goals.md
-│       ├── tdd-workflow.md
-│       └── test-object-pattern.md
-├── human-like-writing-style-guide.md    # 文章スタイルガイド
-├── prompts.md                           # プロンプト集
-├── settings.json                        # Claude Code設定
-├── sync-to-global.sh                    # グローバル同期スクリプト
-└── README.md                            # このファイル
-```
+このディレクトリには、Claude Codeやその他Coding Agentの開発規約とガイドラインが含まれています。
 
 ## Sync to Global Configuration
 
-You can copy the configuration from this repository to `~/.claude/` to use it across all projects.
+You can copy the configuration from this repository to `~/.connect0459/coding-agents/` and set up symlinks for Claude and GitHub Copilot to use it across all projects.
 
 ### Usage
 
 ```bash
 # Run from repository root
-./dev-settings/claude/sync-to-global.sh
+./dev-settings/coding-agents/sync-to-global.sh
 
-# Or run from claude directory
-cd dev-settings/claude
+# Or run from coding-agents directory
+cd dev-settings/coding-agents
 ./sync-to-global.sh
 ```
 
 ### Synchronized Files
 
-- `CLAUDE.md` → `~/.claude/CLAUDE.md`
-- `agent-docs/**` → `~/.claude/agent-docs/**`
-- `settings.json` (permissions only) → `~/.claude/settings.json`
+Central location (`~/.connect0459/coding-agents/`):
+
+- `AGENTS.md` (physical copy)
+- `agent-docs/**` (physical copy)
+
+Symlinks to central location:
+
+- `~/.claude/CLAUDE.md` → `~/.connect0459/coding-agents/AGENTS.md`
+- `~/.github/copilot-instructions.md` → `~/.connect0459/coding-agents/AGENTS.md`
+
+Settings (physical copy):
+
+- `claude/settings.json` (permissions only) → `~/.claude/settings.json`
 
 **Note**: Only the `permissions` field from `settings.json` is synchronized. Other settings remain untouched.
 
-**Requirements**: The `jq` command is required to sync permissions. Install with `brew install jq` if not available.
+**Requirements**: Python 3 is required for this script.
 
 ## 設定の優先順位
 
-Claude Codeは以下の優先順位で設定を読み込みます：
+以下の優先順位で設定を読み込みます：
 
-1. プロジェクトローカル: `<project>/dev-settings/claude/CLAUDE.md`
-2. グローバル: `~/.claude/CLAUDE.md`
+1. プロジェクトローカル: `<project>/dev-settings/coding-agents/AGENTS.md`
+2. グローバル: `~/.claude/CLAUDE.md` (→ `~/.connect0459/coding-agents/AGENTS.md`)
 
 プロジェクト固有の設定を追加したい場合は、このディレクトリを各プロジェクトにコピーしてカスタマイズできます。
 
@@ -73,4 +55,4 @@ Claude Codeは以下の優先順位で設定を読み込みます：
 - **Rich Domain Objects**: データ + ロジック、getter/setter排除
 - **品質 > 速度**: 持続可能性と保守性を優先
 
-詳細は`CLAUDE.md`を参照してください。
+詳細は`AGENTS.md`を参照してください。
