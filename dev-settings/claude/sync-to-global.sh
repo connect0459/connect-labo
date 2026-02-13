@@ -128,11 +128,38 @@ echo ""
 echo "Sync completed"
 echo ""
 
+# Setup GitHub Copilot CLI symlink
+echo "Setting up GitHub Copilot CLI symlink..."
+COPILOT_INSTRUCTIONS="${HOME}/.github/copilot-instructions.md"
+CLAUDE_MD="${TARGET_DIR}/CLAUDE.md"
+
+# Create .github directory if it does not exist
+if [ ! -d "${HOME}/.github" ]; then
+    echo "Creating directory: ${HOME}/.github"
+    mkdir -p "${HOME}/.github"
+fi
+
+# Remove existing file or symlink if it exists
+if [ -e "${COPILOT_INSTRUCTIONS}" ] || [ -L "${COPILOT_INSTRUCTIONS}" ]; then
+    echo "Removing existing copilot-instructions.md"
+    rm -f "${COPILOT_INSTRUCTIONS}"
+fi
+
+# Create symlink
+echo "Creating symlink: ${COPILOT_INSTRUCTIONS} -> ${CLAUDE_MD}"
+ln -s "${CLAUDE_MD}" "${COPILOT_INSTRUCTIONS}"
+
+echo ""
+
 # Calculate checksums after sync
 echo "Calculating checksums after sync..."
 CLAUDE_MD_AFTER=$(calculate_checksum "${TARGET_DIR}/CLAUDE.md")
 AGENT_DOCS_AFTER=$(calculate_checksum "${TARGET_DIR}/agent-docs")
 SETTINGS_JSON_AFTER=$(calculate_checksum "${TARGET_DIR}/settings.json")
+COPILOT_SYMLINK_STATUS="not_checked"
+if [ -L "${HOME}/.github/copilot-instructions.md" ]; then
+    COPILOT_SYMLINK_STATUS="exists"
+fi
 echo ""
 
 # Display changes
@@ -163,6 +190,11 @@ if [ -f "${SCRIPT_DIR}/settings.json" ]; then
     else
         echo "  - settings.json (no changes)"
     fi
+fi
+
+if [ "$COPILOT_SYMLINK_STATUS" = "exists" ]; then
+    echo "  ✓ GitHub Copilot symlink (created)"
+    has_changes=true
 fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
