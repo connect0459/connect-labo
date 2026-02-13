@@ -1,4 +1,4 @@
-# Claude設定ファイル
+# README - Coding Agents
 
 このディレクトリには、Claude Codeやその他Coding Agentの開発規約とガイドラインが含まれています。
 
