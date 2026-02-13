@@ -1,6 +1,6 @@
 # README - Coding Agents
 
-このディレクトリには、Claude Codeやその他Coding Agentの開発規約とガイドラインが含まれています。
+このディレクトリには、Claude Codeやその他コーディングエージェントの開発規約とガイドラインが含まれています。
 
 ## Sync to Global Configuration
 
