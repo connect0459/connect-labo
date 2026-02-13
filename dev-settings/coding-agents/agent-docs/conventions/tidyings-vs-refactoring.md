@@ -192,9 +192,9 @@ This improves testability and follows DDD principles."
 テストが通った後の小さな改善を行います。大きな構造変更が必要な場合は、
 別途Refactoringとして計画してください。
 
-## Claude Codeとの協働
+## Coding Agentとの協働
 
-### Claude Codeに指示する際
+### Coding Agentに指示する際
 
 **Tidyingsを依頼**:
 
@@ -209,9 +209,9 @@ This improves testability and follows DDD principles."
 計画を立ててから実施してください。」
 ```
 
-### Claude Codeの判断基準
+### Coding Agentの判断基準
 
-Claude Codeは以下の基準で自動判断します：
+Coding Agentは以下の基準で自動判断します：
 
 - **2分以内**: その場でTidyingsを実行
 - **2分以上**: Refactoringとして計画を提案

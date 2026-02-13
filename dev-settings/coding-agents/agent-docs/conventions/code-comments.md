@@ -9,9 +9,9 @@
 - **コミットログ**: 変更理由（Why）を記述
 - **コードコメント**: **基本的に書かない**
 
-### Claude Codeへのコメント指示
+### コメント指示
 
-Claude Codeにコメントを書いてもらう場合：
+Coding Agentにコメントを書いてもらう場合：
 
 1. **原則**: ユーザーが明示的に許可した場合のみ記述
 2. **確認**: コメントがWhy not（選択しなかった理由）を表しているか確認
@@ -200,11 +200,11 @@ for i in 0..items.len() {
 ## 参考資料
 
 - [コードコメントにおける「Why Not」の重要性](https://zenn.dev/never_be_a_pm/articles/69d204df1a8c4a)
-- Evergreen原則: `~/.claude/agent-docs/testing/tdd-workflow.md`
+- Evergreen原則: `~/.connect0459/coding-agents/agent-docs/testing/tdd-workflow.md`
 
 ## まとめ
 
-### Claude Code使用時
+### Coding Agent使用時
 
 - **基本原則**: コードコメントは書かない
 - **例外**: ユーザーが明示的に許可した場合のみ

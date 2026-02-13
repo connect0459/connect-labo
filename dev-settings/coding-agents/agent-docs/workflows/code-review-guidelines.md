@@ -303,7 +303,7 @@ return formatUserData(data);
 [良い点の賞賛]
 ```
 
-## Claude Codeでのレビューワークフロー
+## Coding Agentでのレビューワークフロー
 
 ### 1. レビュー開始
 

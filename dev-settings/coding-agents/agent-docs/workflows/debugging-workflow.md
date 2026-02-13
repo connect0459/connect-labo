@@ -430,7 +430,7 @@ try {
 }
 ```
 
-## Claude Codeでのデバッグ依頼
+## Coding Agentでのデバッグ依頼
 
 ### 基本テンプレート
 

@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md / CLAUDE.md
 
 ## Primary Directive
 
@@ -34,10 +34,10 @@
 
 - **バックエンド（Go/Rust）**: オニオンアーキテクチャ
   - レイヤー境界厳守、依存性逆転の原則
-  - 詳細: `~/.claude/agent-docs/architecture/onion-architecture.md`
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/architecture/onion-architecture.md`
 - **フロントエンド**: Package by Features
   - 機能ごとにコード凝集
-  - 詳細: `~/.claude/agent-docs/architecture/package-by-features.md`
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/architecture/package-by-features.md`
 - **フルスタックフレームワーク**: 標準構成を尊重（Laravel等）
 
 ### テスト戦略
@@ -48,32 +48,32 @@
 - **Test Object Pattern**: テストデータを構造体で管理
 - **カバレッジ**: 実装前にユーザーと目標協議
 - **詳細**:
-  - TDDワークフロー: `~/.claude/agent-docs/testing/tdd-workflow.md`
-  - テストパターン: `~/.claude/agent-docs/testing/test-object-pattern.md`
-  - カバレッジ目標: `~/.claude/agent-docs/testing/coverage-goals.md`
+  - TDDワークフロー: `~/.connect0459/coding-agents/agent-docs/testing/tdd-workflow.md`
+  - テストパターン: `~/.connect0459/coding-agents/agent-docs/testing/test-object-pattern.md`
+  - カバレッジ目標: `~/.connect0459/coding-agents/agent-docs/testing/coverage-goals.md`
 
 ### コーディング規約
 
 - **コミット**: 日本語 + Conventional Commits（UTF-8必須）
-  - 詳細: `~/.claude/agent-docs/conventions/commit-messages.md`
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/commit-messages.md`
 - **リファクタリング**: Tidyings（2分以内）vs Refactoring（計画的）
-  - 詳細: `~/.claude/agent-docs/conventions/tidyings-vs-refactoring.md`
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/tidyings-vs-refactoring.md`
 - **Git Hooks**: UTF-8検証、コードフォーマット
-  - 詳細: `~/.claude/agent-docs/conventions/git-hooks.md`
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/git-hooks.md`
 - **エラーメッセージ**: 英語で統一
 - **ドキュメント**: TSDoc/Godocで関数・クラス説明（日本語）
 - **記述原則**: コードにHow、テストにWhat、コミットログにWhy
 - **コードコメント**: **基本的に書かない** 。書く場合はユーザーの明示的な許可が必要
-  - コードコメント規約の詳細: `~/.claude/agent-docs/conventions/code-comments.md`
+  - コードコメント規約の詳細: `~/.connect0459/coding-agents/agent-docs/conventions/code-comments.md`
 
 ### 実装パターン
 
 - **ドメインオブジェクト**: Rich Domain Objects、値オブジェクト、エンティティ
-  - 詳細: `~/.claude/agent-docs/examples/domain-objects.md`
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/examples/domain-objects.md`
 - **リポジトリ**: 抽象型定義（domain）→ 実装（infrastructure）
-  - 詳細: `~/.claude/agent-docs/examples/repository-pattern.md`
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/examples/repository-pattern.md`
 
-## Claude Code協働ルール
+## 協働ルール
 
 ### 必須事項（YOU MUST）
 

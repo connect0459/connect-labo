@@ -123,22 +123,10 @@ git commit -m "tidy: remove unnecessary else clause in getUserName"
 git commit -m "refactor: extract user validation logic to domain service"
 ```
 
-## Claude Code協働時のコミット
-
-Claude Codeがコミットを作成する際は、以下のフォーマットを使用します：
-
-```text
-<type>: <subject>
-
-<body>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
 ## UTF-8エンコーディング検証
 
+冒頭で述べたとおり、本プロジェクトではコミットメッセージのエンコーディングをUTF-8に統一します。
+特に複数のコーディングエージェント（人間・AIツールなど）が協働する環境では、文字化けや解析エラーを防ぐために、UTF-8であることを機械的に検証しておくことが重要です。
 コミットメッセージは必ずUTF-8エンコーディングで記述する必要があります。
 Git Hooksで自動検証することを推奨します。
 
