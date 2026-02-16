@@ -452,5 +452,5 @@ Related to #456
 
 **参考資料**:
 
-- `dev-settings/claude/agent-docs/conventions/commit-messages.md` - コミットメッセージ規約
-- `dev-settings/claude/agent-docs/workflows/code-review-guidelines.md` - レビューガイドライン
+- `dev-settings/coding-agents/agent-docs/conventions/commit-messages.md` - コミットメッセージ規約
+- `dev-settings/coding-agents/agent-docs/workflows/code-review-guidelines.md` - レビューガイドライン

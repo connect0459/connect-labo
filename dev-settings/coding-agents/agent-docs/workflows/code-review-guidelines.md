@@ -340,5 +340,5 @@ PR #123 をレビューしてください。
 
 **参考資料**:
 
-- `dev-settings/claude/agent-docs/conventions/code-comments.md` - コメント規約
-- `dev-settings/claude/agent-docs/testing/tdd-workflow.md` - テスト戦略
+- `dev-settings/coding-agents/agent-docs/conventions/code-comments.md` - コメント規約
+- `dev-settings/coding-agents/agent-docs/testing/tdd-workflow.md` - テスト戦略
