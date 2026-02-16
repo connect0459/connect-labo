@@ -14,13 +14,13 @@
     "build.types": "astro check"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.6",
+    "@astrojs/check": "0.9.2",
     "@astrojs/mdx": "4.3.13",
     "@astrojs/rss": "4.0.15",
     "@astrojs/sitemap": "3.7.0",
     "@tailwindcss/vite": "4.1.18",
     "astro": "5.17.2",
-    "eslint": "10.0.0",
+    "eslint": "9.39.2",
     "eslint-plugin-astro": "1.5.0",
     "marked": "17.0.2",
     "prettier": "3.8.1",
