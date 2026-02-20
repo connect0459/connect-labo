@@ -122,18 +122,6 @@
 - imports、component名、test、Storybook、型定義など全参照を一度に更新
 - 命名規則は既存コードベースのパターンに従う
 
-### デバッグ
-
-- 詳細: `dev-settings/coding-agents/agent-docs/workflows/debugging-workflow.md`
-- コード変更前にファイル読み込みとロジックトレースで静的解析
-- 複数レイヤーにまたがる問題は調査→診断→アプローチ提示→承認→実装の順
-
-### PR作成
-
-- 詳細: `dev-settings/coding-agents/agent-docs/workflows/pr-description-style.md`
-- 既存のマージ済みPRを参照してスタイルを把握
-- ユーザー固有のフォーマット規則（太字、装飾、構造）を尊重
-
 ---
 
 **品質 > 速度** の哲学で、持続可能で保守性の高いコードを一緒に作りましょう！
