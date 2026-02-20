@@ -8,15 +8,15 @@
 
 ### 主要言語とフレームワーク
 
-- **フロントエンド**: TypeScript (React, Astro, Qwik)
-- **バックエンド**: Go (net/http, Echo), PHP (Laravel, Slim Framework), Rust
+- **フロントエンド**: TypeScript (React, SolidJS, Astro, Qwik)
+- **バックエンド**: PHP (Laravel, Slim Framework), Go (net/http, Echo), Rust
 - **補助言語**: Python (uv)
 - **データベース**: MySQL, PostgreSQL, SQLite
-- **ツール**: Docker, npm (nvmでNode.js管理), Vite, Vitest, Playwright
+- **ツール**: Docker, nvm, Vite, Vitest, Playwright
 
 ### パッケージ管理
 
-- JavaScript/TypeScript: npm
+- JavaScript/TypeScript: npm, pnpm
 - Python: uv
 - Rust: cargo
 - PHP: composer
@@ -24,8 +24,8 @@
 ## 開発哲学
 
 - **TDD重視**: デトロイト派（モック最小化、実際のオブジェクト協調）
-- **Evergreen原則**: 長期的価値（WHY > WHAT、ビジネスルール重視）
-- **Rich Domain Objects**: データ + ロジック、getter/setter排除
+- **Evergreen原則**: 長期的価値（実装詳細を説明するのではなく、そのテストで何のビジネスルールを見たいかを重視）
+- **Rich Domain Objects**: データ + ロジック、getter/setter排除、Immutability
 - **品質 > 速度**: 持続可能性と保守性を優先
 
 ## 実践方法
@@ -46,6 +46,7 @@
 - **デトロイト派**: モックは外部境界のみ、内部は実際のインスタンス
 - **Living Documentation**: 日本語テスト名で仕様表現
 - **Test Object Pattern**: テストデータを構造体で管理
+  - ただし、リポジトリごとに思想が違うので、リポジトリ毎の一般的なパターンに合わせること
 - **カバレッジ**: 実装前にユーザーと目標協議
 - **詳細**:
   - TDDワークフロー: `~/.connect0459/coding-agents/agent-docs/testing/tdd-workflow.md`
@@ -69,7 +70,8 @@
 ### 実装パターン
 
 - **ドメインオブジェクト**: Rich Domain Objects、値オブジェクト、エンティティ
-  - 詳細: `~/.connect0459/coding-agents/agent-docs/examples/domain-objects.md`
+  - 実装例: `~/.connect0459/coding-agents/agent-docs/examples/domain-objects.md`
+  - 設計哲学: `~/.connect0459/coding-agents/agent-docs/philosophy/designing-domain-objects.md`
 - **リポジトリ**: 抽象型定義（domain）→ 実装（infrastructure）
   - 詳細: `~/.connect0459/coding-agents/agent-docs/examples/repository-pattern.md`
 
@@ -110,14 +112,14 @@
 
 ### コードレビュー
 
-- 詳細: `dev-settings/coding-agents/agent-docs/workflows/code-review-guidelines.md`
+- 詳細: `~/.connect0459/coding-agents/agent-docs/workflows/code-review-guidelines.md`
 - レビュー時は明示的な指示がない限りテストを実行しない
 - 不自然に見えるコードは、バグと判断する前に意図を確認
 - PR説明作成時は既存PRのスタイルを参照
 
 ### リファクタリング
 
-- 詳細: `dev-settings/coding-agents/agent-docs/workflows/refactoring-checklist.md`
+- 詳細: `~/.connect0459/coding-agents/agent-docs/workflows/refactoring-checklist.md`
 - 実装前に変更対象の完全なチェックリストを作成し承認を得る
 - imports、component名、test、Storybook、型定義など全参照を一度に更新
 - 命名規則は既存コードベースのパターンに従う
@@ -126,6 +128,6 @@
 
 **品質 > 速度** の哲学で、持続可能で保守性の高いコードを一緒に作りましょう！
 
-すべての詳細ドキュメントは `dev-settings/coding-agents/agent-docs/` に配置されています。
+すべての詳細ドキュメントは `~/.connect0459/coding-agents/agent-docs/` に配置されています。
 
 **注**: このリポジトリのagent-docsはgit管理され、複数のPC間で共有されます。

@@ -420,5 +420,5 @@ UserCard を UserProfile にリネームしたいです。
 
 **参考資料**:
 
-- `dev-settings/coding-agents/agent-docs/conventions/tidyings-vs-refactoring.md` - リファクタリングの判断基準
-- `dev-settings/coding-agents/agent-docs/testing/tdd-workflow.md` - テスト駆動開発
+- `~/.connect0459/coding-agents/agent-docs/conventions/tidyings-vs-refactoring.md` - リファクタリングの判断基準
+- `~/.connect0459/coding-agents/agent-docs/testing/tdd-workflow.md` - テスト駆動開発
