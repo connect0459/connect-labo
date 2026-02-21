@@ -5,5 +5,5 @@ AGENTs.mdやagent-docsをグローバルディレクトリに反映させるコ�
 ## How to Use
 
 ```bash
-cd /path/to/connect-labo/dev-settings/coding-agents/sync-cmd && go build -o main && ./main
+go build -o main && ./main
 ```

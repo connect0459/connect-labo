@@ -9,12 +9,7 @@ You can copy the configuration from this repository to `~/.connect0459/coding-ag
 ### Usage
 
 ```bash
-# Run from repository root
-./dev-settings/coding-agents/sync-to-global.sh
-
-# Or run from coding-agents directory
-cd dev-settings/coding-agents
-./sync-to-global.sh
+cd dev-settings/coding-agents/sync-cmd && go build -o main && ./main
 ```
 
 ### Synchronized Files
