@@ -10,6 +10,7 @@ import (
 	"connect-labo/dev-settings/coding-agents/sync-cmd/internal/dirsync"
 	"connect-labo/dev-settings/coding-agents/sync-cmd/internal/permissions"
 	"connect-labo/dev-settings/coding-agents/sync-cmd/internal/symlink"
+	"connect-labo/dev-settings/coding-agents/sync-cmd/internal/term"
 )
 
 func main() {
@@ -19,14 +20,14 @@ func main() {
 func run() int {
 	exe, err := os.Executable()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to get executable path: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to get executable path: %v", err)))
 		return 1
 	}
 	sourceDir := filepath.Dir(filepath.Dir(filepath.Clean(exe)))
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to get home directory: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to get home directory: %v", err)))
 		return 1
 	}
 
@@ -45,10 +46,10 @@ func run() int {
 	claudeSettings := filepath.Join(claudeDir, "settings.json")
 	copilotInstructions := filepath.Join(githubDir, "copilot-instructions.md")
 
-	fmt.Println("Coding agents configuration sync tool")
-	fmt.Printf("Source:  %s\n", sourceDir)
-	fmt.Printf("Central: %s\n", centralDir)
-	fmt.Printf("Claude:  %s\n", claudeDir)
+	fmt.Println(term.Bold("Coding agents configuration sync tool"))
+	fmt.Printf("%s  %s\n", term.Dim("Source:"), sourceDir)
+	fmt.Printf("%s %s\n", term.Dim("Central:"), centralDir)
+	fmt.Printf("%s  %s\n", term.Dim("Claude:"), claudeDir)
 	fmt.Println()
 
 	before := map[string]string{
@@ -61,38 +62,38 @@ func run() int {
 	os.MkdirAll(claudeDir, 0755)
 	os.MkdirAll(githubDir, 0755)
 
-	fmt.Println("Syncing AGENTS.md to central location")
+	fmt.Println(term.Cyan("Syncing AGENTS.md to central location"))
 	if err := dirsync.CopyFile(sourceAgentsMD, centralAgentsMD); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to copy AGENTS.md: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to copy AGENTS.md: %v", err)))
 		return 1
 	}
 
-	fmt.Println("Syncing agent-docs directory to central location")
+	fmt.Println(term.Cyan("Syncing agent-docs directory to central location"))
 	if err := dirsync.Sync(sourceAgentDocs, centralAgentDocs); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to sync agent-docs: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to sync agent-docs: %v", err)))
 		return 1
 	}
 
 	settingsExists := false
 	if _, err := os.Stat(sourceSettings); err == nil {
 		settingsExists = true
-		fmt.Println("Syncing permissions from settings.json")
+		fmt.Println(term.Cyan("Syncing permissions from settings.json"))
 		if err := permissions.Merge(sourceSettings, claudeSettings); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to merge permissions: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to merge permissions: %v", err)))
 			return 1
 		}
 	}
 
 	fmt.Println()
-	fmt.Println("Setting up symlinks...")
+	fmt.Println(term.Cyan("Setting up symlinks..."))
 	if err := symlink.Setup(centralAgentsMD, claudeMD); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to setup symlink for CLAUDE.md: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to setup symlink for CLAUDE.md: %v", err)))
 		return 1
 	}
 	fmt.Printf("  %s -> %s\n", claudeMD, centralAgentsMD)
 
 	if err := symlink.Setup(centralAgentsMD, copilotInstructions); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to setup symlink for copilot-instructions.md: %v\n", err)
+		fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to setup symlink for copilot-instructions.md: %v", err)))
 		return 1
 	}
 	fmt.Printf("  %s -> %s\n", copilotInstructions, centralAgentsMD)
@@ -104,9 +105,9 @@ func run() int {
 		"settings":   checksum.Of(claudeSettings),
 	}
 
-	line := strings.Repeat("━", 38)
+	line := term.Dim(strings.Repeat("━", 38))
 	fmt.Println(line)
-	fmt.Println("Change Detection Report")
+	fmt.Println(term.Bold("Change Detection Report"))
 	fmt.Println(line)
 
 	hasChanges := false
@@ -125,29 +126,29 @@ func run() int {
 
 	for _, it := range items {
 		if before[it.key] != after[it.key] {
-			fmt.Printf("  ✓ %s (updated)\n", it.label)
+			fmt.Printf("  %s\n", term.Green(fmt.Sprintf("✓ %s (updated)", it.label)))
 			hasChanges = true
 		} else {
-			fmt.Printf("  - %s (no changes)\n", it.label)
+			fmt.Printf("  %s\n", term.Dim(fmt.Sprintf("- %s (no changes)", it.label)))
 		}
 	}
 
 	if isSymlink(claudeMD) {
-		fmt.Println("  ✓ Claude symlink (active)")
+		fmt.Println("  " + term.Green("✓ Claude symlink (active)"))
 		hasChanges = true
 	}
 
 	if isSymlink(copilotInstructions) {
-		fmt.Println("  ✓ GitHub Copilot symlink (active)")
+		fmt.Println("  " + term.Green("✓ GitHub Copilot symlink (active)"))
 		hasChanges = true
 	}
 
 	fmt.Println(line)
 
 	if hasChanges {
-		fmt.Println("✓ Changes were applied successfully")
+		fmt.Println(term.BoldGreen("✓ Changes were applied successfully"))
 	} else {
-		fmt.Println("✓ All files were already up to date")
+		fmt.Println(term.BoldGreen("✓ All files were already up to date"))
 	}
 
 	return 0
