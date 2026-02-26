@@ -44,6 +44,7 @@
       "source.organizeImports": "explicit" // コード保存時にimport行を整理
     }
   },
+  "python.terminal.activateEnvironment": false,
   "python.analysis.typeCheckingMode": "strict",
   "python.languageServer": "Pylance",
   // PHP
