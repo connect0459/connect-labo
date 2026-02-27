@@ -55,6 +55,8 @@
 
 ### コーディング規約
 
+- **命名**: 理解しやすさ・簡潔さ・一貫性・区別しやすさの4原則に従う
+  - 詳細: `dev-settings/coding-agents/agent-docs/essences/naming-things.md`
 - **コミット**: 日本語 + Conventional Commits（UTF-8必須）
   - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/commit-messages.md`
 - **リファクタリング**: Tidyings（2分以内）vs Refactoring（計画的）
