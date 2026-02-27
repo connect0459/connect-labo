@@ -113,37 +113,80 @@ func run() int {
 	hasChanges := false
 
 	type item struct {
-		label string
-		key   string
+		label    string
+		key      string
+		itemType string
 	}
 	items := []item{
-		{"AGENTS.md", "agents_md"},
-		{"agent-docs/", "agent_docs"},
+		{"AGENTS.md", "agents_md", "docs"},
+		{"agent-docs/", "agent_docs", "docs"},
 	}
 	if settingsExists {
-		items = append(items, item{"settings.json", "settings"})
+		items = append(items, item{"settings.json", "settings", "docs"})
 	}
 
+	type tableRow struct {
+		status   string
+		itemType string
+		name     string
+		changed  bool
+	}
+
+	var rows []tableRow
 	for _, it := range items {
 		if before[it.key] != after[it.key] {
-			fmt.Printf("  %s\n", term.Green(fmt.Sprintf("✓ %s (updated)", it.label)))
+			rows = append(rows, tableRow{"✓", it.itemType, it.label, true})
 			hasChanges = true
 		} else {
-			fmt.Printf("  %s\n", term.Dim(fmt.Sprintf("- %s (no changes)", it.label)))
+			rows = append(rows, tableRow{"-", it.itemType, it.label, false})
+		}
+	}
+	if isSymlink(claudeMD) {
+		rows = append(rows, tableRow{"✓", "symlink", "Claude", true})
+		hasChanges = true
+	}
+	if isSymlink(copilotInstructions) {
+		rows = append(rows, tableRow{"✓", "symlink", "GitHub Copilot", true})
+		hasChanges = true
+	}
+
+	headers := [3]string{"Status", "Type", "Name"}
+	widths := [3]int{len(headers[0]), len(headers[1]), len(headers[2])}
+	for _, r := range rows {
+		if w := len([]rune(r.status)); w > widths[0] {
+			widths[0] = w
+		}
+		if w := len(r.itemType); w > widths[1] {
+			widths[1] = w
+		}
+		if w := len([]rune(r.name)); w > widths[2] {
+			widths[2] = w
 		}
 	}
 
-	if isSymlink(claudeMD) {
-		fmt.Println("  " + term.Green("✓ Claude symlink (active)"))
-		hasChanges = true
+	sep := func(left, mid, right, fill string) string {
+		return left +
+			strings.Repeat(fill, widths[0]+2) + mid +
+			strings.Repeat(fill, widths[1]+2) + mid +
+			strings.Repeat(fill, widths[2]+2) + right
 	}
 
-	if isSymlink(copilotInstructions) {
-		fmt.Println("  " + term.Green("✓ GitHub Copilot symlink (active)"))
-		hasChanges = true
+	fmt.Println(term.Dim(sep("┌", "┬", "┐", "─")))
+	fmt.Printf("│ %-*s │ %-*s │ %-*s │\n", widths[0], headers[0], widths[1], headers[1], widths[2], headers[2])
+	fmt.Println(term.Dim(sep("├", "┼", "┤", "─")))
+	for _, r := range rows {
+		rowLine := fmt.Sprintf("│ %-*s │ %-*s │ %-*s │",
+			widths[0], r.status,
+			widths[1], r.itemType,
+			widths[2], r.name,
+		)
+		if r.changed {
+			fmt.Println(term.Green(rowLine))
+		} else {
+			fmt.Println(term.Dim(rowLine))
+		}
 	}
-
-	fmt.Println(line)
+	fmt.Println(term.Dim(sep("└", "┴", "┘", "─")))
 
 	if hasChanges {
 		fmt.Println(term.BoldGreen("✓ Changes were applied successfully"))
