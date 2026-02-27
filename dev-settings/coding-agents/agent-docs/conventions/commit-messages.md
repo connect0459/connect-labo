@@ -128,9 +128,6 @@ git commit -m "refactor: extract user validation logic to domain service"
 冒頭で述べたとおり、本プロジェクトではコミットメッセージのエンコーディングをUTF-8に統一します。
 特に複数のコーディングエージェント（人間・AIツールなど）が協働する環境では、文字化けや解析エラーを防ぐために、UTF-8であることを機械的に検証しておくことが重要です。
 コミットメッセージは必ずUTF-8エンコーディングで記述する必要があります。
-Git Hooksで自動検証することを推奨します。
-
-詳細は `agent-docs/conventions/git-hooks.md` を参照してください。
 
 ## OSS開発時の考慮事項
 

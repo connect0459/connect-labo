@@ -62,8 +62,6 @@
   - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/commit-messages.md`
 - **リファクタリング**: Tidyings（2分以内）vs Refactoring（計画的）
   - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/tidyings-vs-refactoring.md`
-- **Git Hooks**: UTF-8検証、コードフォーマット
-  - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/git-hooks.md`
 - **エラーメッセージ**: 英語で統一
 - **ドキュメント**: TSDoc/Godocで関数・クラス説明（日本語）
 - **記述原則**: コードにHow、テストにWhat、コミットログにWhy
