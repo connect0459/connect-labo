@@ -1,5 +1,7 @@
 # コミットメッセージ規約
 
+> 哲学的背景・原則の概要: `dev-settings/coding-agents/agent-docs/essences/living-documentation.md`（「コミットメッセージへの適用」セクション）
+
 ## 基本方針
 
 - **フォーマット**: 日本語 + Conventional Commits準拠
