@@ -1,7 +1,7 @@
 {
   "name": "connect-labo-blog",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -14,12 +14,12 @@
     "build.types": "astro check"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.6",
-    "@astrojs/mdx": "4.3.13",
-    "@astrojs/rss": "4.0.15",
-    "@astrojs/sitemap": "3.7.0",
+    "@astrojs/check": "0.9.7",
+    "@astrojs/mdx": "5.0.0",
+    "@astrojs/rss": "4.0.17",
+    "@astrojs/sitemap": "3.7.1",
     "@tailwindcss/vite": "4.2.1",
-    "astro": "5.18.0",
+    "astro": "6.0.4",
     "eslint": "10.0.3",
     "eslint-plugin-astro": "1.6.0",
     "marked": "17.0.4",
@@ -28,7 +28,7 @@
     "sharp": "0.34.5",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.56.1",
-    "vite": "6.4.1"
+    "typescript-eslint": "8.57.0",
+    "vite": "7.3.1"
   }
 }
