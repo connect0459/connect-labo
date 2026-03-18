@@ -49,10 +49,12 @@
 - **Test Object Pattern**: テストデータを構造体で管理
   - ただし、リポジトリごとに思想が違うので、リポジトリ毎の一般的なパターンに合わせること
 - **カバレッジ**: 実装前にユーザーと目標協議
+- **テストサイズ**: Small / Medium / Large で制約条件を共通語彙化し、エージェントへの指示にも活用
 - **詳細**:
   - TDDワークフロー: `~/.connect0459/coding-agents/agent-docs/testing/tdd-workflow.md`
   - テストパターン: `~/.connect0459/coding-agents/agent-docs/testing/test-object-pattern.md`
   - カバレッジ目標: `~/.connect0459/coding-agents/agent-docs/testing/coverage-goals.md`
+  - テストサイズ戦略: `~/.connect0459/coding-agents/agent-docs/testing/test-sizes.md`
 
 ### コーディング規約
 
