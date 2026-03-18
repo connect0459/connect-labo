@@ -30,6 +30,10 @@ Settings (physical copy):
 
 **Note**: Only the `permissions` field from `settings.json` is synchronized. Other settings remain untouched.
 
+Skills (physical copy):
+
+- `claude/skills/**` → `~/.claude/skills/`
+
 **Requirements**: Python 3 is required for this script.
 
 ## 設定の優先順位
