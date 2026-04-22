@@ -4,12 +4,12 @@
     "connect0459": {
       "source": {
         "source": "github",
-        "repo": "connect0459/cc-plugin"
+        "repo": "connect0459/claude-plugin"
       }
     }
   },
   "enabledPlugins": {
-    "cc-plugin@connect0459": true
+    "claude-plugin@connect0459": true
   },
   "permissions": {
     "allow": [
