@@ -1,4 +1,8 @@
-# TDD ワークフロー（t_wada流）
+# TDD ワークフロー（Red/Green TDD）
+
+Simon Willisonの "Red/Green TDD" に基づく。
+
+- <https://simonwillison.net/guides/agentic-engineering-patterns/red-green-tdd/>
 
 ## 基本原則
 
