@@ -292,6 +292,32 @@ waitUntil { done in
 expect(self.mockView.reloadedCookie).to(beNil())
 ```
 
+### `waitUntil` vs `toEventually` の使い分け
+
+completion callback がある非同期処理には `waitUntil` を使う。 `done()` が呼ばれた後にアサーションするため決定的に検証できる。
+
+| | `waitUntil { done in ... }` | `toEventually(...)` |
+|---|---|---|
+| 向き | completion callback がある非同期処理 | 外から完了を知れない状態変化 |
+| 仕組み | `done()` が呼ばれるまでブロック（決定的） | タイムアウトまでポーリング（非決定的） |
+| 適用例 | `fetchXxx(completion:)` | NotificationCenter 通知後の状態変化 |
+
+```swift
+// ✅ completion callback がある場合 - waitUntil で「完了後にアサート」が明確
+waitUntil { done in
+    presenter.fetchBingoTabVisibility { done() }
+}
+expect(presenter.isBingoEnabled).to(beTrue())
+
+// △ 動くが非決定的 - 「いつか true になるはず」とポーリング
+presenter.fetchBingoTabVisibility {}
+expect(presenter.isBingoEnabled).toEventually(beTrue())
+
+// ✅ toEventually が自然なケース - NotificationCenter のように完了タイミングが外から不明な場合
+notificationCenter.post(name: .foo, object: nil)
+expect(mockView.reloadedCookie).toEventuallyNot(beNil())
+```
+
 ### 「何も起きないこと」の検証
 
 - 「View が更新されない」「クラッシュしない」を検証するテストでは、`waitUntil { done in DispatchQueue.main.async { done() } }` でメインキューをフラッシュしてからアサーションする
