@@ -38,14 +38,12 @@ func run() int {
 	sourceAgentsMD := filepath.Join(sourceDir, "AGENTS.md")
 	sourceAgentDocs := filepath.Join(sourceDir, "agent-docs")
 	sourceSettings := filepath.Join(sourceDir, "claude", "settings.json")
-	sourceSkills := filepath.Join(sourceDir, "claude", "skills")
 
 	centralAgentsMD := filepath.Join(centralDir, "AGENTS.md")
 	centralAgentDocs := filepath.Join(centralDir, "agent-docs")
 
 	claudeMD := filepath.Join(claudeDir, "CLAUDE.md")
 	claudeSettings := filepath.Join(claudeDir, "settings.json")
-	claudeSkills := filepath.Join(claudeDir, "skills")
 	copilotInstructions := filepath.Join(githubDir, "copilot-instructions.md")
 
 	fmt.Println(term.Bold("Coding agents configuration sync tool"))
@@ -58,7 +56,6 @@ func run() int {
 		"agents_md":  checksum.Of(centralAgentsMD),
 		"agent_docs": checksum.Of(centralAgentDocs),
 		"settings":   checksum.Of(claudeSettings),
-		"skills":     checksum.Of(claudeSkills),
 	}
 
 	os.MkdirAll(centralAgentDocs, 0755)
@@ -80,20 +77,9 @@ func run() int {
 	settingsExists := false
 	if _, err := os.Stat(sourceSettings); err == nil {
 		settingsExists = true
-		fmt.Println(term.Cyan("Syncing permissions from settings.json"))
+		fmt.Println(term.Cyan("Syncing settings from settings.json"))
 		if err := permissions.Merge(sourceSettings, claudeSettings); err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to merge permissions: %v", err)))
-			return 1
-		}
-	}
-
-	skillsExists := false
-	if _, err := os.Stat(sourceSkills); err == nil {
-		skillsExists = true
-		fmt.Println(term.Cyan("Syncing skills directory to ~/.claude/skills"))
-		os.MkdirAll(claudeSkills, 0755)
-		if err := dirsync.Sync(sourceSkills, claudeSkills); err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to sync skills: %v", err)))
+			fmt.Fprintf(os.Stderr, "%s\n", term.Red(fmt.Sprintf("failed to merge settings: %v", err)))
 			return 1
 		}
 	}
@@ -117,7 +103,6 @@ func run() int {
 		"agents_md":  checksum.Of(centralAgentsMD),
 		"agent_docs": checksum.Of(centralAgentDocs),
 		"settings":   checksum.Of(claudeSettings),
-		"skills":     checksum.Of(claudeSkills),
 	}
 
 	line := term.Dim(strings.Repeat("━", 38))
@@ -138,9 +123,6 @@ func run() int {
 	}
 	if settingsExists {
 		items = append(items, item{"settings.json", "settings", "docs"})
-	}
-	if skillsExists {
-		items = append(items, item{"skills/", "skills", "docs"})
 	}
 
 	type tableRow struct {

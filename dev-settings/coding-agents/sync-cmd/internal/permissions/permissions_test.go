@@ -86,7 +86,27 @@ func TestMerge(t *testing.T) {
 		}
 	})
 
-	t.Run("ソースにpermissionsがない場合は空オブジェクトをマージする", func(t *testing.T) {
+	t.Run("ソースのすべてのフィールドをターゲットに反映する", func(t *testing.T) {
+		base := t.TempDir()
+		source := filepath.Join(base, "source.json")
+		target := filepath.Join(base, "target.json")
+		os.WriteFile(source, []byte(`{"permissions": {"allow": ["read"]}, "enabledPlugins": {"cc-plugin@connect0459": true}, "extraKnownMarketplaces": {"connect0459": {}}}`), 0644)
+		os.WriteFile(target, []byte(`{}`), 0644)
+
+		if err := Merge(source, target); err != nil {
+			t.Fatal(err)
+		}
+
+		result := readJSON(t, target)
+		if _, ok := result["enabledPlugins"]; !ok {
+			t.Error("enabledPlugins がターゲットに反映されていない")
+		}
+		if _, ok := result["extraKnownMarketplaces"]; !ok {
+			t.Error("extraKnownMarketplaces がターゲットに反映されていない")
+		}
+	})
+
+	t.Run("ソースにpermissionsがない場合はターゲットにpermissionsが追加されない", func(t *testing.T) {
 		base := t.TempDir()
 		source := filepath.Join(base, "source.json")
 		target := filepath.Join(base, "target.json")
@@ -98,12 +118,11 @@ func TestMerge(t *testing.T) {
 		}
 
 		result := readJSON(t, target)
-		perms, ok := result["permissions"].(map[string]any)
-		if !ok {
-			t.Fatal("permissions がマップではない")
+		if _, ok := result["permissions"]; ok {
+			t.Error("permissions が追加されるべきではない")
 		}
-		if len(perms) != 0 {
-			t.Errorf("期待値: {}, 実際: %v", perms)
+		if result["other"] != "value" {
+			t.Errorf("other フィールドが期待値と異なる: %v", result["other"])
 		}
 	})
 }

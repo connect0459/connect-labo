@@ -15,17 +15,14 @@ func Merge(sourcePath, targetPath string) error {
 		return err
 	}
 
-	sourcePerms, ok := sourceMap["permissions"]
-	if !ok {
-		sourcePerms = map[string]any{}
-	}
-
 	targetMap := map[string]any{}
 	if targetData, err := os.ReadFile(targetPath); err == nil {
 		json.Unmarshal(targetData, &targetMap)
 	}
 
-	targetMap["permissions"] = sourcePerms
+	for k, v := range sourceMap {
+		targetMap[k] = v
+	}
 
 	out, err := json.MarshalIndent(targetMap, "", "  ")
 	if err != nil {
