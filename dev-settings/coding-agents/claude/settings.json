@@ -4,12 +4,12 @@
     "connect0459": {
       "source": {
         "source": "github",
-        "repo": "connect0459/claude-plugin"
+        "repo": "connect0459/connect0459-agent-skills"
       }
     }
   },
   "enabledPlugins": {
-    "claude-plugin@connect0459": true
+    "connect0459-agent-skills@connect0459": true
   },
   "permissions": {
     "allow": [
