@@ -1,5 +1,16 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "extraKnownMarketplaces": {
+    "connect0459": {
+      "source": {
+        "source": "github",
+        "repo": "connect0459/cc-plugin"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "cc-plugin@connect0459": true
+  },
   "permissions": {
     "allow": [
       "Bash(cat:*)",
