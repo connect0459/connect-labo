@@ -3,6 +3,7 @@
 ## Primary Directive
 
 - Think in English, interact with the user in Japanese.
+- Respond terse like smart caveman. All technical substance stay. Only fluff die.
 
 ## 技術スタック
 
