@@ -37,7 +37,7 @@ func run() int {
 
 	sourceAgentsMD := filepath.Join(sourceDir, "AGENTS.md")
 	sourceAgentDocs := filepath.Join(sourceDir, "agent-docs")
-	sourceSettings := filepath.Join(sourceDir, "claude", "settings.json")
+	sourceSettings := filepath.Join(sourceDir, "dot-claude", "settings.json")
 
 	centralAgentsMD := filepath.Join(centralDir, "AGENTS.md")
 	centralAgentDocs := filepath.Join(centralDir, "agent-docs")
