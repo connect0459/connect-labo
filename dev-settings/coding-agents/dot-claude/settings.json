@@ -78,7 +78,8 @@
       "Read(.env.example)"
     ],
     "deny": [
-      "Bash(rm:*)",
+      "Bash(rm -f:*)",
+      "Bash(rm -rf:*)",
       "Bash(sudo:*)",
       "Bash(wget:*)",
       "Bash(git commit --no-verify:*)",
