@@ -4,29 +4,20 @@
 
 - Think in English, interact with the user in Japanese.
 
-## 開発哲学
-
-- **TDD重視**: デトロイト派（モック最小化、実際のオブジェクト協調）
-- **Evergreen原則**: 長期的価値（実装詳細を説明するのではなく、そのテストで何のビジネスルールを見たいかを重視）
-- **Rich Domain Objects**: データ + ロジック、getter/setter排除、Immutability
-- **品質 > 速度**: 持続可能性と保守性を優先
-
 ## 実践方法
 
 ### アーキテクチャ
 
 - **バックエンド（Go/Rust）**: オニオンアーキテクチャ
-  - レイヤー境界厳守、依存性逆転の原則
   - 詳細: `~/.connect0459/coding-agents/agent-docs/architecture/onion-architecture.md`
 - **フロントエンド**: Package by Features
-  - 機能ごとにコード凝集
   - 詳細: `~/.connect0459/coding-agents/agent-docs/architecture/package-by-features.md`
 - **フルスタックフレームワーク**: 標準構成を尊重（Laravel等）
 
 ### テスト戦略
 
 - **Red/Green TDD**: Red → Green → Refactor
-- **デトロイト派**: モックは外部境界のみ、内部は実際のインスタンス
+- **デトロイト派**: モックは外部境界のみ
 - **Living Documentation**: 日本語テスト名で仕様表現
   - 詳細: `dev-settings/coding-agents/agent-docs/essences/living-documentation.md`
 - **Test Object Pattern**: テストデータを構造体で管理
@@ -92,9 +83,4 @@
 5. 機密情報のハードコーディング
 
 ---
-
-**品質 > 速度** の哲学で、持続可能で保守性の高いコードを一緒に作りましょう！
-
 すべての詳細ドキュメントは `~/.connect0459/coding-agents/agent-docs/` に配置されています。
-
-**注**: このリポジトリのagent-docsはgit管理され、複数のPC間で共有されます。
