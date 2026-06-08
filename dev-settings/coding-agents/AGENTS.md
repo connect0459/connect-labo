@@ -4,23 +4,6 @@
 
 - Think in English, interact with the user in Japanese.
 
-## 技術スタック
-
-### 主要言語とフレームワーク
-
-- **フロントエンド**: TypeScript (React, SolidJS, Astro, Qwik)
-- **バックエンド**: PHP (Laravel, Slim Framework), Go (net/http, Echo), Rust
-- **補助言語**: Python (uv)
-- **データベース**: MySQL, PostgreSQL, SQLite
-- **ツール**: Docker, nvm, Vite, Vitest, Playwright
-
-### パッケージ管理
-
-- JavaScript/TypeScript: npm, pnpm
-- Python: uv
-- Rust: cargo
-- PHP: composer
-
 ## 開発哲学
 
 - **TDD重視**: デトロイト派（モック最小化、実際のオブジェクト協調）
@@ -42,7 +25,7 @@
 
 ### テスト戦略
 
-- **TDDワークフロー**: Red → Green → Refactor
+- **Red/Green TDD**: Red → Green → Refactor
 - **デトロイト派**: モックは外部境界のみ、内部は実際のインスタンス
 - **Living Documentation**: 日本語テスト名で仕様表現
   - 詳細: `dev-settings/coding-agents/agent-docs/essences/living-documentation.md`
@@ -60,12 +43,12 @@
 
 - **命名**: 理解しやすさ・簡潔さ・一貫性・区別しやすさの4原則に従う
   - 詳細: `dev-settings/coding-agents/agent-docs/essences/naming-things.md`
-- **コミット**: 日本語 + Conventional Commits（UTF-8必須）
+- **コミット**: Conventional Commits
   - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/commit-messages.md`
 - **リファクタリング**: Tidyings（2分以内）vs Refactoring（計画的）
   - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/tidyings-vs-refactoring.md`
-- **エラーメッセージ**: 英語で統一
-- **ドキュメント**: TSDoc/Godocで関数・クラス説明（日本語）
+- **エラーメッセージ**: 原則は英語で記述
+- **ドキュメント**: TSDoc/Godocで関数・クラス説明
 - **記述原則**: コードにHow、テストにWhat、コミットログにWhy
 - **コードコメント**: **基本的に書かない** 。書く場合はユーザーの明示的な許可が必要
   - コードコメント規約の詳細: `~/.connect0459/coding-agents/agent-docs/conventions/code-comments.md`
@@ -97,11 +80,8 @@
 1. ビジネスロジックの実装前にユーザーと方針を擦り合わせ
 2. Rich Domain Objects（Anemic Domain Model回避）
 3. Getter/setterパターン排除（`getName()` → `name()`）
-4. カバレッジ目標未達成時は実装完了とみなさない
-5. GitHubリソースアクセスは`gh`コマンド優先
-6. デバッグ時は静的解析を優先（debug loggingの追加は最終手段）
-7. コードレビュー時、意図的な設計判断をバグとしてフラグしない（不明な場合は質問する）
-8. 実装アプローチを提案する前に、現在のアーキテクチャを理解・提示してユーザー承認を得る
+4. GitHubリソースアクセスは`gh`コマンド優先
+5. 実装アプローチを提案する前に、現在のアーキテクチャを理解・提示してユーザー承認を得る
 
 ### 絶対禁止（NEVER）
 
@@ -110,22 +90,6 @@
 3. 外部システム以外でのモック使用
 4. レイヤー間の直接依存（必ず抽象型経由）
 5. 機密情報のハードコーディング
-
-## ワークフロー別ガイドライン
-
-### コードレビュー
-
-- 詳細: `~/.connect0459/coding-agents/agent-docs/workflows/code-review-guidelines.md`
-- レビュー時は明示的な指示がない限りテストを実行しない
-- 不自然に見えるコードは、バグと判断する前に意図を確認
-- PR説明作成時は既存PRのスタイルを参照
-
-### リファクタリング
-
-- 詳細: `~/.connect0459/coding-agents/agent-docs/workflows/refactoring-checklist.md`
-- 実装前に変更対象の完全なチェックリストを作成し承認を得る
-- imports、component名、test、Storybook、型定義など全参照を一度に更新
-- 命名規則は既存コードベースのパターンに従う
 
 ---
 
