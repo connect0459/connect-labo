@@ -31,6 +31,8 @@
 | `refactor` | リファクタリング | `refactor: ユーザーサービスをドメイン層に移動` |
 | `tidy` | 整理整頓（Tidyings） | `tidy: 不要なelse句を削除` |
 | `test` | テスト | `test: ユーザー作成のテストを追加` |
+| `ci` | CI/CD パイプライン (GitHub Actions, workflows) | `ci: actionsのバージョンをハッシュ値で固定` |
+| `perf` | パフォーマンス改善 | `perf: 関数Aの実行速度を2倍改善` |
 | `chore` | その他 | `chore: 依存関係を更新` |
 
 ### Subject（件名）
