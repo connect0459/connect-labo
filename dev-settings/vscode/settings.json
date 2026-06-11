@@ -92,6 +92,7 @@
   "[swift]": {
     "editor.tabSize": 4
   },
+  "swift.disableSwiftPackageManagerIntegration": true,
   // JSON
   "[json]": {
     "editor.tabSize": 2,
