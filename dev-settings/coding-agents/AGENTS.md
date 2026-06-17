@@ -25,6 +25,19 @@
 
 ## 実践方法
 
+### 実装パターン
+
+- **ドメインオブジェクト**: Rich Domain Objects、値オブジェクト、エンティティ
+  - 実装例: `~/.connect0459/coding-agents/agent-docs/examples/domain-objects.md`
+  - 設計哲学: `~/.connect0459/coding-agents/agent-docs/philosophy/designing-domain-objects.md`
+- **リポジトリ**: 抽象型定義（domain）→ 実装（infrastructure）
+  - 詳細: `~/.connect0459/coding-agents/agent-docs/examples/repository-pattern.md`
+
+アーキテクチャの例は以下を参照:
+
+- オニオンアーキテクチャ: `~/.connect0459/coding-agents/agent-docs/architecture/onion-architecture.md`
+- Package by Features: `~/.connect0459/coding-agents/agent-docs/architecture/package-by-features.md`
+
 ### アーキテクチャ
 
 - **バックエンド（Go/Rust）**: オニオンアーキテクチャ
@@ -37,7 +50,7 @@
 
 - **Red/Green TDD**: Red → Green → Refactor
 - **デトロイト派**: モックは外部境界のみ
-- **Living Documentation**: 日本語テスト名で仕様表現
+- **Living Documentation**: テスト名で仕様表現
   - 詳細: `dev-settings/coding-agents/agent-docs/essences/living-documentation.md`
 - **Test Object Pattern**: テストデータを構造体で管理
   - ただし、リポジトリごとに思想が違うので、リポジトリ毎の一般的なパターンに合わせること
@@ -53,50 +66,37 @@
 
 - **命名**: 理解しやすさ・簡潔さ・一貫性・区別しやすさの4原則に従う
   - 詳細: `dev-settings/coding-agents/agent-docs/essences/naming-things.md`
-- **コミット**: Conventional Commits
-  - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/commit-messages.md`
 - **リファクタリング**: Tidyings（2分以内）vs Refactoring（計画的）
   - 詳細: `~/.connect0459/coding-agents/agent-docs/conventions/tidyings-vs-refactoring.md`
-- **エラーメッセージ**: 原則は英語で記述
-- **ドキュメント**: TSDoc/Godocで関数・クラス説明
 - **記述原則**: コードにHow、テストにWhat、コミットログにWhy
 - **コードコメント**: **基本的に書かない** 。書く場合はユーザーの明示的な許可が必要
   - コードコメント規約の詳細: `~/.connect0459/coding-agents/agent-docs/conventions/code-comments.md`
-
-### 実装パターン
-
-- **ドメインオブジェクト**: Rich Domain Objects、値オブジェクト、エンティティ
-  - 実装例: `~/.connect0459/coding-agents/agent-docs/examples/domain-objects.md`
-  - 設計哲学: `~/.connect0459/coding-agents/agent-docs/philosophy/designing-domain-objects.md`
-- **リポジトリ**: 抽象型定義（domain）→ 実装（infrastructure）
-  - 詳細: `~/.connect0459/coding-agents/agent-docs/examples/repository-pattern.md`
 
 ## 協働ルール
 
 ### 必須事項（YOU MUST）
 
 1. 実装前にテスト作成、実装後に実行確認（スパイクの例外は設計原則を参照）
-2. デトロイト派思想（モックは外部境界のみ）
-3. Evergreen原則（ビジネスルール重視、WHY記述）
+2. デトロイト派思想
+3. Evergreen原則
 4. Test Object Patternで階層的テスト記述（原則）
 5. レイヤー境界厳守（抽象型経由）
-6. カバレッジ目標を実装前に協議
-7. Tidyings（2分以内）vs Refactoring（計画的）を区別
-8. リファクタリング/リネーム時は `grep -r`・IDE の Find All References 等で全参照を洗い出し、一度に更新する（複数ラウンドの修正を避ける）
-9. パターンの汎化時は全インスタンスを一括適用（一部だけ更新して残りを放置しない）
+6. Tidyings（2分以内）vs Refactoring（計画的）を区別
+7. リファクタリング/リネーム時は `grep -r`・IDE の Find All References 等で全参照を洗い出し、一度に更新する（複数ラウンドの修正を避ける）
+8. パターンの汎化時は全インスタンスを一括適用（一部だけ更新して残りを放置しない）
 
 ### 重要事項（IMPORTANT）
 
-1. ビジネスロジックの実装前にユーザーと方針を擦り合わせ
+1. Immutable Firstなクラス・構造体の設計
 2. Rich Domain Objects（Anemic Domain Model回避）
-3. Getter/setterパターン排除（`getName()` → `name()`）
+3. Getter/Setterパターン排除（`getName()` → `name()`）
 4. GitHubリソースアクセスは`gh`コマンド優先
 5. 実装アプローチを提案する前に、現在のアーキテクチャを理解・提示してユーザー承認を得る
 
 ### 絶対禁止（NEVER）
 
 1. システム破壊コマンドの独断実行（`rm -rf`等）
-2. レイヤー間の直接依存（必ず抽象型経由）
+2. レイヤー間の直接依存（抽象型経由を優先）
 3. 機密情報のハードコーディング
 
 ### 設計原則（Design Principles）
@@ -111,12 +111,5 @@
   - 外部I/O（DB・HTTP・ファイル等）との境界ではモックが合理的。詳細は `agent-docs/testing/tdd-workflow.md` を参照。
 
 ---
+
 すべての詳細ドキュメントは `~/.connect0459/coding-agents/agent-docs/` に配置されています。
-
-## 指示の管理原則
-
-このドキュメントへの変更は以下を記録すること：
-
-- **追加理由**: どの問題・失敗パターンへの対処か
-- **対象モデル**: どのモデルバージョンで観測された問題か（将来の巻き戻し判断に使う）
-- **廃止条件**: どうなったらこの指示を削除・緩和すべきか
