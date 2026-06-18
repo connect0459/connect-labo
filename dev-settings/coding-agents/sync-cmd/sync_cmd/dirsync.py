@@ -4,6 +4,8 @@ from pathlib import Path
 
 def sync(src: Path, dst: Path) -> None:
     src, dst = Path(src), Path(dst)
+    if not src.is_dir():
+        raise FileNotFoundError(f"source directory not found: {src}")
     if dst.is_dir():
         _delete_extra_files(src, dst)
         _delete_empty_dirs(dst)
