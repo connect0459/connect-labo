@@ -15,4 +15,7 @@ def merge(source_path: Path, target_path: Path) -> None:
 
     target_map.update(source_map)
 
-    target_path.write_text(json.dumps(target_map, indent=2) + "\n")
+    target_path.write_text(
+        json.dumps(target_map, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
