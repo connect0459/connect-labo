@@ -18,11 +18,14 @@ def _directory_digest(dir_path: Path) -> str:
         return "NOT_EXISTS"
 
     h = hashlib.sha256()
-    entries = sorted(
-        (p.relative_to(dir_path), p)
-        for p in dir_path.rglob("*")
-        if p.is_file()
-    )
+    try:
+        entries = sorted(
+            (p.relative_to(dir_path), p)
+            for p in dir_path.rglob("*")
+            if p.is_file()
+        )
+    except OSError:
+        return "NOT_EXISTS"
     for rel, abs_path in entries:
         h.update(str(rel).encode())
         h.update(_file_digest(abs_path).encode())
