@@ -9,7 +9,7 @@ You can copy the configuration from this repository to `~/.connect0459/coding-ag
 ### Usage
 
 ```bash
-cd dev-settings/coding-agents/sync-cmd && go build -o main && ./main && cd -
+cd dev-settings/coding-agents/sync-cmd && uv run sync-cmd && cd -
 ```
 
 ### Synchronized Files
@@ -34,7 +34,7 @@ Skills (physical copy):
 
 - `claude/skills/**` → `~/.claude/skills/`
 
-**Requirements**: Python 3 is required for this script.
+**Requirements**: Python 3.11+ and [uv](https://docs.astral.sh/uv/) are required.
 
 ## 設定の優先順位
 

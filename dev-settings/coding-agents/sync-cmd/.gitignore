@@ -1,3 +1,6 @@
-# built binaries
-main
-sync-cmd
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+dist/
+*.egg-info/
