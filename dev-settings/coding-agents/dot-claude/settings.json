@@ -92,11 +92,11 @@
       "Read(.env.stag*)",
       "Read(id_ed25519)",
       "Read(id_rsa)",
-      "Write(.env)",
-      "Write(.env.dev*)",
-      "Write(.env.local*)",
-      "Write(.env.prod*)",
-      "Write(.env.stag*)"
+      "Edit(.env)",
+      "Edit(.env.dev*)",
+      "Edit(.env.local*)",
+      "Edit(.env.prod*)",
+      "Edit(.env.stag*)"
     ],
     "ask": []
   }
