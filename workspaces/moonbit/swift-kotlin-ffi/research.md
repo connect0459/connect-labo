@@ -179,7 +179,42 @@ add(41) = 42
 
 **MoonBitで書いた関数を、JNI経由でJVM（Kotlinと同一のバイトコード境界）から呼び出し、正しい実行結果を得るところまでエンドツーエンドで確認できた。** シム自体は `moonbit-tree-sitter` が採用していた「薄い手書きCスタブ」パターンと同型であり、経路A全体を通じて一貫した設計（MoonBit本体を変更せず、境界にプラットフォーム固有の薄いCグルーコードを置く）が成立することも合わせて確認された。
 
-残る未検証事項: 実際のkotlinc出力での確認、Android実機/NDKクロスコンパイルでの再現、複合型（文字列・構造体等）を跨いだ場合のJNI境界でのマーシャリング・ライフタイム管理（本ノート冒頭で確認した `#borrow` 属性や明示的close/deinitパターンとの整合）。
+残る未検証事項（当時）: 実際のkotlinc出力での確認、Android実機/NDKクロスコンパイルでの再現、複合型（文字列・構造体等）を跨いだ場合のJNI境界でのマーシャリング・ライフタイム管理（本ノート冒頭で確認した `#borrow` 属性や明示的close/deinitパターンとの整合）。
+
+#### 実際のkotlinc出力での再検証（2026-08-01、 `spike-native-export/kotlin-test/` ）
+
+上記のJava代理検証を、実機の `kotlinc`（2.4.10、Homebrew経由でインストール）でも確認した。
+
+```kotlin
+// ExportSpikeKotlinTest.kt
+external fun add(value: Int): Int
+
+fun main() {
+    System.loadLibrary("exportspike_jni_kotlin")
+    val result = add(41)
+    println("add(41) = $result")
+    check(result == 42) { "unexpected result: $result" }
+}
+```
+
+コンパイル後のクラスファイルを `javap` で確認すると、トップレベルの `external fun` は次の通り静的native methodとして出力されることが分かった。
+
+```console
+$ javap -p ExportSpikeKotlinTestKt.class
+public final class ExportSpikeKotlinTestKt {
+  public static final native int add(int);
+  ...
+}
+```
+
+これはJavaの `public static native int add(int)` と完全に同一のシグネチャであり、事前の推測（KotlinのJNI境界はJavaと同一）を裏付けている。JNIシンボル名も推測通り `Java_ExportSpikeKotlinTestKt_add` （ファイル名 + `Kt` サフィックスというKotlinのトップレベル関数コンパイル規則通り）であり、同じCスタブパターンでリンクできた。
+
+```console
+$ java -Djava.library.path=. -cp app.jar ExportSpikeKotlinTestKt
+add(41) = 42
+```
+
+**実際のkotlinc出力を使い、Kotlin(JVM)からMoonBit native関数を呼び出すところまで確認できた。** これにより「Javaを代理にした検証」という留保は解消された。MoonBit側のオブジェクトファイル（ `export_spike.o` , `runtime.o` 等）は前回のJava検証時と完全に同一のものを再利用しており、**1つのnative成果物を複数のJVM言語（Java/Kotlin）から共用できる**ことも合わせて確認された。
 
 ### `moonbitlang/moonbit-native-runtime` の実装確認
 
@@ -412,7 +447,7 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - **リリースビルドでの再現確認**: 今回の検証はdebug buildのみ。release build（ `MOONBIT_NEW_NATIVE` 環境変数の値によってコード生成戦略が変わる）でも同じ手動リンク手順が通るかは未確認。
 - **Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン）への展開**: 今回の検証はmacOSホスト上のarm64向けのみ。ABIごとの `.so` / `.a` ビルド、および `libbacktrace` / `simdutf` 相当のクロスコンパイル済みオブジェクトの入手可否は未検証。
 - ~~JNI（Kotlin側）経由の実呼び出し検証~~ → **2026-07-31確認済み**（本ノート「JNI経由でのKotlin/JVM実呼び出し検証」節）。ただしJava経由での代理確認であり、実際のkotlinc出力での確認ではない。
-- **kotlinc実機での確認（優先度中）**: 上記はJavaを代理としたJNI境界の確認。実際にKotlinコンパイラ（未導入）でビルドした `external fun` からも同様に動作するかを確認する。
+- ~~kotlinc実機での確認~~ → **2026-08-01確認済み**（本ノート「実際のkotlinc出力での再検証」節）。kotlinc 2.4.10でビルドした `external fun` から、Java検証時と同じMoonBitオブジェクトを使って正しく呼び出せることを確認した。
 - **Swift Cモジュールマップ経由の実呼び出し検証**: プレーンC・JNI(JVM)からの呼び出しは確認済みだが、Swift側（Cモジュールマップ経由）は未検証。
 - **複合型のJNI境界マーシャリング**: 今回はInt一つの単純なケースのみ。文字列・構造体等を跨ぐ場合のマーシャリング・ライフタイム管理（ `#borrow` 属性、明示的close/deinitパターン）の実装・検証が必要。
 - **`moonbitlang/moon` へのコントリビュート検討**: FIXMEコメントで明示された既知の欠落であるため、この手動リンク手順を `moon` 本体に正式機能として提案する余地がある（AGPLv3ライセンス下での注意点を要確認）。
