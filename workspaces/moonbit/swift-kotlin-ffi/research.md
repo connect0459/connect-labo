@@ -395,6 +395,99 @@ sum=4000000000000
 - 逆に、「読むだけ」のアクセサ関数（引数を消費しない関数）は所有権に影響しないため、同一オブジェクトを何度呼び出しをまたいで再利用しても安全 —— これはKotlin/Swift側で「ハンドルを保持しつつ複数のプロパティ相当のメソッドを呼ぶ」という一般的な使い方をそのまま安全に実現できることを意味する。
 - 文字列リテラルの免除確認により、「常に一律decrefする」という単純な解放ポリシーを採用でき、動的/静的の判定分岐をバインディング層に持ち込む必要がない。
 
+#### JNI(Kotlin)・Swift側での実際の解放実装（2026-08-01、 `spike-native-export/kotlin-release-test/` 、 `spike-native-export/swift-release-test/` ）
+
+上記の知見（exportされた関数の戻り値は呼び出し元に所有権が完全移譲され、`moonbit_decref`を明示的に1回呼ぶ責任がある）を踏まえ、実際に解放を組み込んだラッパークラスをJNI(Kotlin)・Swift双方で実装し、動作を実測した。
+
+##### Kotlin/JNI側: `AutoCloseable` + `close()`
+
+```kotlin
+class PointHandle private constructor(private var ptr: Long) : AutoCloseable {
+    private var closed = false
+
+    val x: Int get() { check(!closed); return nativePointX(ptr) }
+    val y: Int get() { check(!closed); return nativePointY(ptr) }
+
+    override fun close() {
+        if (!closed) {
+            nativeReleasePoint(ptr)   // JNIシム経由でmoonbit_decref(ptr)を呼ぶ
+            closed = true
+        }
+    }
+
+    companion object {
+        fun create(x: Int, y: Int): PointHandle = PointHandle(nativeMakePoint(x, y))
+    }
+}
+```
+
+JNIシム側で `nativeReleasePoint` は単に `moonbit_decref((void *)(intptr_t)ptr)` を呼ぶだけであり、MoonBit側に新規コードは不要（既存の `make_point` / `point_x` / `point_y` のみ利用）。ポインタはJNIの `jlong` として受け渡す。`close()` は多重呼び出しに備えて `closed` フラグでガードしている。
+
+`use { }`（Kotlinのtry-with-resources相当）での基本動作、および多重close の安全性を確認した上で、200万回のcreate/close サイクルで close() の有無によるメモリ推移を比較した。
+
+```console
+$ java ... MainKt 0   # close()を呼ばないベースライン
+mode: WITHOUT close() (leak baseline)
+  after  400000 iterations: rss = 54.1 MB
+  after  800000 iterations: rss = 71.1 MB
+  after 2000000 iterations: rss = 89.5 MB
+
+$ java ... MainKt 1   # 各反復の最後にclose()を呼ぶ
+mode: WITH close()
+  after  400000 iterations: rss = 47.6 MB
+  after  800000 iterations: rss = 57.0 MB
+  after 2000000 iterations: rss = 57.1 MB   ← 800000以降フラット
+```
+
+close()なしは一貫して増加し続けるのに対し、close()ありはJVM起動・JITウォームアップ分（〜57MB）で頭打ちになり、以降2Mまで一切増加しない。**Kotlin側の`AutoCloseable`実装が、実際にMoonBitオブジェクトのリークを防ぐことを実測で確認した。**
+
+##### Swift側: `deinit`（明示的close不要）
+
+```swift
+final class PointHandle {
+    private var ptr: UnsafeMutableRawPointer?
+
+    static func create(x: Int32, y: Int32) -> PointHandle {
+        PointHandle(ptr: make_point(x, y))
+    }
+
+    var x: Int32 { point_x(ptr!) }
+    var y: Int32 { point_y(ptr!) }
+
+    deinit {
+        if let ptr { moonbit_decref(ptr) }
+    }
+}
+```
+
+SwiftのARCは決定的（deterministic）であり、他に強参照が残っていなければ変数がスコープを抜けた時点で確実に`deinit`が呼ばれる。そのため**Kotlinのような明示的`close()`は不要**で、`deinit`の中で`moonbit_decref`を呼ぶだけで正しく解放される。この違い自体が、KotlinとSwiftでオブジェクト解放規約の設計が異なるべき理由を裏付けている（JVMの通常のGCは終了処理〔finalize/Cleaner〕のタイミングを保証しないため、明示的APIが必須。ARCは参照が外れた瞬間に確実に動く）。
+
+「スコープを抜けてdeinitが毎回発火するケース」と「配列に追加して意図的に強参照を保持し続け、deinitを起こさせないケース」を比較した。
+
+```console
+$ .build/release/ExportSpikeSwiftRelease 0   # スコープを抜けるたびにdeinit発火
+mode: SCOPED (deinit fires each iteration)
+  after  400000 iterations: rss = 5.6 MB
+  after 2000000 iterations: rss = 5.7 MB   ← ほぼフラット
+
+$ .build/release/ExportSpikeSwiftRelease 1   # 配列に保持し続けdeinitを起こさせない
+mode: RETAINED (deinit withheld)
+  after  400000 iterations: rss = 33.1 MB
+  after  800000 iterations: rss = 60.6 MB
+  after 2000000 iterations: rss = 136.9 MB   ← 一貫して増加
+```
+
+scopedモードは2M反復してもほぼ5.7MBでフラット、retainedモード（意図的に保持し続けた場合）は136.9MBまで増加した。**Swiftの`deinit`だけで、明示的close()なしに正しくMoonBitオブジェクトを解放できることを実測で確認した。**
+
+##### まとめ
+
+| 言語 | 解放の仕組み | 明示的close的APIの要否 |
+| --- | --- | --- |
+| Kotlin(JVM) | `AutoCloseable.close()`をJNIシム経由で呼び、内部で`moonbit_decref` | **必須**（JVM GCのfinalizeタイミングは保証されないため） |
+| Swift | `deinit`内で`moonbit_decref`を呼ぶ | **不要**（ARCは参照が外れた時点で決定的に発火） |
+
+両言語とも、MoonBit側のコード変更は一切不要（既存のexport関数をそのまま呼ぶだけ）で、ホスト言語側の薄いラッパークラスのみで正しいライフタイム管理を実現できることが実測で確認された。
+
 ### `moonbitlang/moonbit-native-runtime` の実装確認
 
 `include/moonbit.h` （コンパイラのランタイム実装のミラー、生成Cコードとユーザー側Cスタブが共にリンクする対象）より。
@@ -631,7 +724,7 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - **iOS実機/シミュレータ向けの確認（優先度中）**: Swift検証はmacOSホスト・SwiftPM CLIのみ。実際のiOS向けクロスコンパイル・Xcodeプロジェクト経由でのテストは未実施。
 - ~~複合型（文字列・構造体）のマーシャリング~~ → **2026-08-01確認済み**（本ノート「複合型のマーシャリング検証」節）。文字列（双方向）・構造体（不透明ハンドル経由）とも正しく動作し、200万回ループでのクラッシュ・リークなしも確認した。
 - ~~長期保持されるMoonBitオブジェクトのライフタイム管理~~ → **2026-08-01確認済み**（本ノート「訂正：長期保持オブジェクトのライフタイム管理を精査した結果」節）。exportされた関数の戻り値は呼び出し元に所有権が完全移譲され、`moonbit_decref`を明示的に1回呼ぶ責任は呼び出し元にある（自動解放されない＝実測でリークを確認）。読むだけのアクセサ関数は引数を消費しない。文字列リテラルはrc=-1のimmortalオブジェクトでincref/decrefが安全なノーオペレーション。
-- **JNI/Swift側での解放呼び出しの実装（優先度高）**: 上記の知見を踏まえ、Kotlin側は`Closeable`/`finalize`相当、Swift側は`deinit`相当のタイミングで`moonbit_decref`を呼ぶラッパークラスを実装し、実際にJNI/Cモジュールマップ経由で解放まで動作することを確認する。
+- ~~JNI/Swift側での解放呼び出しの実装~~ → **2026-08-01確認済み**（本ノート「JNI(Kotlin)・Swift側での実際の解放実装」節）。Kotlinは`AutoCloseable.close()`（JVM GCのfinalizeタイミングが保証されないため必須）、Swiftは`deinit`（ARCが決定的なため明示APIなしで十分）と、言語ごとに異なる解放規約が必要であることを実測で確認した。
 - **`moonbitlang/moon` へのコントリビュート検討**: FIXMEコメントで明示された既知の欠落であるため、この手動リンク手順を `moon` 本体に正式機能として提案する余地がある（AGPLv3ライセンス下での注意点を要確認）。
 
 ## 参考リンク
