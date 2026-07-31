@@ -216,6 +216,45 @@ add(41) = 42
 
 **実際のkotlinc出力を使い、Kotlin(JVM)からMoonBit native関数を呼び出すところまで確認できた。** これにより「Javaを代理にした検証」という留保は解消された。MoonBit側のオブジェクトファイル（ `export_spike.o` , `runtime.o` 等）は前回のJava検証時と完全に同一のものを再利用しており、**1つのnative成果物を複数のJVM言語（Java/Kotlin）から共用できる**ことも合わせて確認された。
 
+#### Swift（Cモジュールマップ経由）実呼び出し検証（2026-08-01、 `spike-native-export/swift-test/` ）
+
+残っていたSwift側の検証を行った。JNIの薄いCスタブと対をなす、Swift Package Managerの `systemLibrary` ターゲット（モジュールマップ＋ヘッダのみ、実体は事前ビルド済みの `.dylib` にリンク）という、Swiftのエコシステムで最も標準的なCライブラリ取り込み方式を採用した。
+
+```modulemap
+// Sources/CMoonBitExport/module.modulemap
+module CMoonBitExport {
+    header "shim.h"
+    export *
+}
+```
+
+```c
+// Sources/CMoonBitExport/shim.h
+int add(int value);
+```
+
+```swift
+// Sources/ExportSpikeSwiftTest/main.swift
+import CMoonBitExport
+
+let result = add(41)
+print("add(41) = \(result)")
+precondition(result == 42, "unexpected result: \(result)")
+```
+
+リンク対象のライブラリは、Java/Kotlin検証時と全く同じ手順（ `export_spike.o` + `runtime.o` + moonバンドルのsimdutf/backtrace補助オブジェクト）で `libexportspike_swift.dylib` として再構築した。`Package.swift` の `executableTarget` にリンカフラグ（ `-L`, `-lexportspike_swift`, `-rpath` ）を設定し、`swift build` / `swift run` した。
+
+```console
+$ swift run
+Building for debugging...
+Build of product 'ExportSpikeSwiftTest' complete!
+add(41) = 42
+```
+
+**Swift(Cモジュールマップ経由)からもMoonBit native関数を正しく呼び出せることを確認した。** これで経路Aの主要3ターゲット（プレーンC、JNI経由のJava/Kotlin、Cモジュールマップ経由のSwift）すべてで、同一のMoonBitオブジェクトファイル群を土台に、各プラットフォームの標準的なFFI機構（JNI / Cモジュールマップ）を使った呼び出しが実測で確認できたことになる。MoonBit本体・moonc側には一切手を入れておらず、境界に置いた薄いプラットフォーム固有グルーコード（JNIシムまたはモジュールマップ）だけで完結している。これは本ノート冒頭で確認した `moonbit-tree-sitter` の設計（薄い手書きCスタブ）およびUniFFI型のアーキテクチャと構造的に一致する。
+
+残る留保: 今回はmacOSホスト上のarm64向けビルド・SwiftPM CLI（`swift build`/`swift run`）での確認であり、実際のiOS実機/シミュレータ向けクロスコンパイルやXcodeプロジェクト経由でのテストではない。ビルド時に「macOS-11.0向けだが実際はより新しいOSでビルドされたdylibとリンクしている」という警告が出ており、iOS向けにはデプロイメントターゲット・アーキテクチャの整合を別途取る必要がある。
+
 ### `moonbitlang/moonbit-native-runtime` の実装確認
 
 `include/moonbit.h` （コンパイラのランタイム実装のミラー、生成Cコードとユーザー側Cスタブが共にリンクする対象）より。
@@ -448,7 +487,8 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - **Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン）への展開**: 今回の検証はmacOSホスト上のarm64向けのみ。ABIごとの `.so` / `.a` ビルド、および `libbacktrace` / `simdutf` 相当のクロスコンパイル済みオブジェクトの入手可否は未検証。
 - ~~JNI（Kotlin側）経由の実呼び出し検証~~ → **2026-07-31確認済み**（本ノート「JNI経由でのKotlin/JVM実呼び出し検証」節）。ただしJava経由での代理確認であり、実際のkotlinc出力での確認ではない。
 - ~~kotlinc実機での確認~~ → **2026-08-01確認済み**（本ノート「実際のkotlinc出力での再検証」節）。kotlinc 2.4.10でビルドした `external fun` から、Java検証時と同じMoonBitオブジェクトを使って正しく呼び出せることを確認した。
-- **Swift Cモジュールマップ経由の実呼び出し検証**: プレーンC・JNI(JVM)からの呼び出しは確認済みだが、Swift側（Cモジュールマップ経由）は未検証。
+- ~~Swift Cモジュールマップ経由の実呼び出し検証~~ → **2026-08-01確認済み**（本ノート「Swift（Cモジュールマップ経由）実呼び出し検証」節）。SwiftPMの`systemLibrary`ターゲット経由で、Java/Kotlin検証と同一手順で再構築したdylibを正しく呼び出せた。
+- **iOS実機/シミュレータ向けの確認（優先度中）**: Swift検証はmacOSホスト・SwiftPM CLIのみ。実際のiOS向けクロスコンパイル・Xcodeプロジェクト経由でのテストは未実施。
 - **複合型のJNI境界マーシャリング**: 今回はInt一つの単純なケースのみ。文字列・構造体等を跨ぐ場合のマーシャリング・ライフタイム管理（ `#borrow` 属性、明示的close/deinitパターン）の実装・検証が必要。
 - **`moonbitlang/moon` へのコントリビュート検討**: FIXMEコメントで明示された既知の欠落であるため、この手動リンク手順を `moon` 本体に正式機能として提案する余地がある（AGPLv3ライセンス下での注意点を要確認）。
 
