@@ -14,3 +14,7 @@ target
 
 # Swift Package Manager build artifacts (swift-test/)
 .build/
+
+# Compiled test binaries (complex-types-test/)
+/complex-types-test/test_complex
+/complex-types-test/stress_test
