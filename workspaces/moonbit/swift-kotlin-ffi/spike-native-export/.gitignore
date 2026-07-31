@@ -11,3 +11,6 @@ target
 *.dylib
 *.so
 *.jar
+
+# Swift Package Manager build artifacts (swift-test/)
+.build/

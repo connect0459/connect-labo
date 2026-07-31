@@ -1,0 +1,4 @@
+module CMoonBitExport {
+    header "shim.h"
+    export *
+}
