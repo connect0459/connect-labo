@@ -18,3 +18,8 @@ target
 # Compiled test binaries (complex-types-test/)
 /complex-types-test/test_complex
 /complex-types-test/stress_test
+
+# Compiled test binaries (lifetime-test/)
+/lifetime-test/lifetime_test
+/lifetime-test/leak_check
+/lifetime-test/immortal_decref_check
