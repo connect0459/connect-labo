@@ -255,6 +255,81 @@ add(41) = 42
 
 残る留保: 今回はmacOSホスト上のarm64向けビルド・SwiftPM CLI（`swift build`/`swift run`）での確認であり、実際のiOS実機/シミュレータ向けクロスコンパイルやXcodeプロジェクト経由でのテストではない。ビルド時に「macOS-11.0向けだが実際はより新しいOSでビルドされたdylibとリンクしている」という警告が出ており、iOS向けにはデプロイメントターゲット・アーキテクチャの整合を別途取る必要がある。
 
+#### 複合型（文字列・構造体）のマーシャリング検証（2026-08-01、 `spike-native-export/complex-types-test/` ）
+
+ここまではInt一つの単純なケースのみだった。文字列とレコード型（struct）がFFI境界をどう越えるかを実測した。使用したのは、ツールチェーンに同梱されている公式ヘッダ `~/.moon/include/moonbit.h`（ `moonbit-tree-sitter` が `#include <moonbit.h>` で使っているのと同じもの）。
+
+対象のMoonBitコード（ `complex_types.mbt` 、既存の `spike-native-export` パッケージに追加）:
+
+```moonbit
+#export_name("make_greeting")
+pub fn make_greeting() -> String {
+  "Hello from MoonBit!"
+}
+
+#export_name("string_length")
+pub fn string_length(s : String) -> Int {
+  s.length()
+}
+
+pub struct Point {
+  x : Int
+  y : Int
+}
+
+#export_name("make_point")
+pub fn make_point(x : Int, y : Int) -> Point {
+  { x, y }
+}
+
+#export_name("point_x")
+pub fn point_x(p : Point) -> Int {
+  p.x
+}
+
+#export_name("point_y")
+pub fn point_y(p : Point) -> Int {
+  p.y
+}
+```
+
+**文字列（String）:** MoonBitの `String` はUTF-16表現であり、C側からは `moonbit.h` が定義する `typedef uint16_t *moonbit_string_t;` として見える。長さは通常の配列と同じ `Moonbit_array_length(obj)` マクロ（オブジェクトヘッダの `meta` フィールドを読む）で取得する。
+
+- MoonBit→C（戻り値）: `make_greeting()` の戻り値をそのまま `moonbit_string_t` として受け取り、 `Moonbit_array_length` で長さ19、各 `uint16_t` 要素をASCII文字として読んで `"Hello from MoonBit!"` を正しく復元できた。
+- C→MoonBit（引数）: `moonbit_make_string_raw(len)` でC側からMoonBit管理下の文字列バッファを確保し、ASCII文字を1コード単位ずつ書き込んで（UTF-16のASCII範囲は1文字1コード単位）`"Kotlin"` を構築、 `string_length()` に渡したところ正しく6が返った。
+
+**構造体（struct、非newtype）:** 本ノート冒頭で確認した「newtypeラッパー構造体はABI上透過」という知見に対し、複数フィールドを持つ通常の `struct` がどう扱われるかを検証した。C側では `Point` を中身の分からない**不透明ハンドル（`void*`）**として扱い、フィールドへのアクセスはMoonBit側でexportしたアクセサ関数（`point_x`/`point_y`）経由のみで行った（内部レイアウトを直接読みには行っていない）。これは `moonbit-tree-sitter` の `Language` ハンドルパターンと同じ設計であり、`Point` が実際に参照カウント付きのヒープオブジェクトなのか、レジスタに収まる値型として扱われているのかを問わず、常に正しく動作する頑健な利用法である（今回はこの問いの決着自体は目的としていない）。
+
+```console
+$ ./test_complex
+length=19, chars="Hello from MoonBit!"
+string_length("Kotlin") = 6
+point = (3, 4)
+OK
+```
+
+**ライフタイム・参照カウントの簡易検証:** 上記はいずれも単発呼び出しのみだったため、繰り返し呼び出しでのクラッシュ・リークの有無を200万回のループで確認した。C側からは `moonbit_incref` / `moonbit_decref` を一切呼んでいない。
+
+```c
+for (int i = 0; i < 2000000; i++) {
+    moonbit_string_t g = make_greeting();
+    sum += Moonbit_array_length(g);
+    void *p = make_point(i, i + 1);
+    sum += point_x(p) + point_y(p);
+}
+```
+
+```console
+$ /usr/bin/time -l ./stress_test
+iterations=2000000 sum=4000038000000
+        0.36 real         0.04 user         0.00 sys
+            33554432  maximum resident set size
+```
+
+200万回の反復で `sum` の値は理論値（`N^2 + 19N` = 4,000,038,000,000）と完全に一致し、クラッシュも発生せず、ピークメモリも約33MBで安定していた（2M件のオブジェクトを無管理のまま保持し続けていたら数百MB規模になっているはずである）。**C側で明示的なincref/decrefを一切行わなくても、「MoonBit関数から受け取った値をすぐに別のMoonBit exported関数に渡して使い切る」というこの利用パターンでは、リークも破損も発生しないことを実測で確認した。**
+
+ただし、これは限定的な確認である。**「C側がMoonBitオブジェクトを複数回の別々の呼び出しをまたいで長期保持する」というパターン（JNIでKotlin側がMoonBitオブジェクトをラップしたハンドルとして保持し続けるような、より実務的なケース）は今回検証していない。** この場合に明示的な `moonbit_incref` / `moonbit_decref` の呼び出しが必要になるのか、その責任がどちらの側にあるのかは未確認であり、本ノート冒頭の結論4（opaqueハンドル＋明示的close/deinit方式を採用すべき）の妥当性を実務的なコード規模で検証する際の次の課題として残る。
+
 ### `moonbitlang/moonbit-native-runtime` の実装確認
 
 `include/moonbit.h` （コンパイラのランタイム実装のミラー、生成Cコードとユーザー側Cスタブが共にリンクする対象）より。
@@ -489,7 +564,8 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - ~~kotlinc実機での確認~~ → **2026-08-01確認済み**（本ノート「実際のkotlinc出力での再検証」節）。kotlinc 2.4.10でビルドした `external fun` から、Java検証時と同じMoonBitオブジェクトを使って正しく呼び出せることを確認した。
 - ~~Swift Cモジュールマップ経由の実呼び出し検証~~ → **2026-08-01確認済み**（本ノート「Swift（Cモジュールマップ経由）実呼び出し検証」節）。SwiftPMの`systemLibrary`ターゲット経由で、Java/Kotlin検証と同一手順で再構築したdylibを正しく呼び出せた。
 - **iOS実機/シミュレータ向けの確認（優先度中）**: Swift検証はmacOSホスト・SwiftPM CLIのみ。実際のiOS向けクロスコンパイル・Xcodeプロジェクト経由でのテストは未実施。
-- **複合型のJNI境界マーシャリング**: 今回はInt一つの単純なケースのみ。文字列・構造体等を跨ぐ場合のマーシャリング・ライフタイム管理（ `#borrow` 属性、明示的close/deinitパターン）の実装・検証が必要。
+- ~~複合型（文字列・構造体）のマーシャリング~~ → **2026-08-01確認済み**（本ノート「複合型のマーシャリング検証」節）。文字列（双方向）・構造体（不透明ハンドル経由）とも正しく動作し、200万回ループでのクラッシュ・リークなしも確認した。
+- **長期保持されるMoonBitオブジェクトのライフタイム管理（優先度高）**: 今回の複合型検証は「受け取ってすぐ使い切る」パターンのみ。JNIでKotlin側がMoonBitオブジェクトをハンドルとして長期保持し、複数回の別呼び出しをまたいで使うケースでの明示的incref/decrefの要否・責任の所在は未検証。
 - **`moonbitlang/moon` へのコントリビュート検討**: FIXMEコメントで明示された既知の欠落であるため、この手動リンク手順を `moon` 本体に正式機能として提案する余地がある（AGPLv3ライセンス下での注意点を要確認）。
 
 ## 参考リンク
