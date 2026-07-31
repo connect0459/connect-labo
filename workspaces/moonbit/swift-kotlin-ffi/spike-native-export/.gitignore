@@ -5,8 +5,9 @@ target
 .mooncakes/
 .moonagent/
 
-# JNI spike build artifacts (jni-test/)
+# JNI/Kotlin spike build artifacts (jni-test/, kotlin-test/)
 *.class
 *.o
 *.dylib
 *.so
+*.jar
