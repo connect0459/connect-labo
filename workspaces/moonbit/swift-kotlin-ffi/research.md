@@ -488,6 +488,62 @@ scopedモードは2M反復してもほぼ5.7MBでフラット、retainedモー�
 
 両言語とも、MoonBit側のコード変更は一切不要（既存のexport関数をそのまま呼ぶだけ）で、ホスト言語側の薄いラッパークラスのみで正しいライフタイム管理を実現できることが実測で確認された。
 
+#### Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査（2026-08-01）
+
+ここまでの検証はすべてmacOSホスト上のarm64向け（コンパイル・リンクとも同一アーキテクチャ・同一OS）に閉じていた。実際にAndroid/iOSへ配布するには、moonc自身が対象プラットフォーム向けのオブジェクトを生成できる必要がある。この可否を、推測ではなく `moonc` の実際のオプション一覧・生成物・リンカの挙動から直接確認した。
+
+**1. `moonc link-core -target` がサポートする値を確認した。**
+
+```console
+$ moonc link-core --help
+  ...
+  -target {wasm-gc|wasm|js|native|llvm|aarch64-apple-darwin|aarch64-unknown-linux-gnu|x86_64-unknown-linux-gnu|x86_64-pc-windows-msvc}
+  ...
+```
+
+`native`/`llvm` という抽象名だけでなく、具体的なターゲットトリプルを直接指定できる仕組みがmoonc自体に存在することが分かった。ただし列挙されているのは **macOS（aarch64-apple-darwin）・Linux glibc（aarch64/x86_64-unknown-linux-gnu）・Windows（x86_64-pc-windows-msvc）の4つのみであり、Android・iOS向けのトリプルは1つも含まれていない。**
+
+**2. moonc本体（バイナリ）にAndroid/iOS関連の文字列が一切存在しないことも確認した。**
+
+```console
+$ strings "$(which moonc)" | grep -i "android\|ios\|apple-ios\|linux-android"
+(該当なし、0件)
+```
+
+`--help` に載っていないだけで内部的に対応している、という可能性も排除できた。**moonc v0.10.5+5e7afb0c0 は、Android・iOSのいずれのターゲットトリプルも一切知らない。**
+
+**3. 「同じDarwin系だから、iOS Simulator向けに再リンクだけすれば動くのでは」という迂回路も実測で否定された。**
+
+既存の `export_spike.o`（macOS向けにmoonc がコンパイル済み）を `otool -l` で調べると、`LC_BUILD_VERSION` に `platform 1`（PLATFORM_MACOS）が焼き込まれている。これはリンク時ではなく **mooncのコンパイル時に決定される値** であるため、最終リンクのタイミングで `-target arm64-apple-ios17.0-simulator` を指定しても後から書き換えることはできない。実際に試したところ、リンカが明確にこれを検出して拒否した。
+
+```console
+$ cc -shared -target arm64-apple-ios17.0-simulator \
+    -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
+    -o libexportspike_ios_sim_test.dylib \
+    export_spike.o runtime.o moonbit_simdutf.o simdutf.o libbacktrace.a
+ld: building for 'iOS-simulator', but linking in object file (export_spike.o) built for 'macOS'
+clang: error: linker command failed with exit code 1
+```
+
+これは経路Aでこれまで繰り返し使ってきた「`moon` の未対応工程だけを手動で肩代わりする」という迂回策が通用しない種類の欠落であることを意味する。`foreign_library` のリンク未対応は **`moon`（オープンソースのビルドオーケストレーション）側の配線漏れ** であり、moonc自体は正しいオブジェクトを生成していたからこそ手動リンクが機能した。一方、Android/iOS向けのコード生成自体の欠如は **`moonc`（非公開のコンパイラ本体）が最初からそのターゲットを知らない** という、迂回不可能な種類の欠落である。
+
+**4. 唯一の理論上の迂回路であるLLVMバックエンド（`-llvm-target` に任意のトリプルを指定できる）も、現行のstableチャンネルでは機能しないことを確認した。**
+
+```console
+$ moon build --target llvm
+Warning: LLVM backend is experimental and only supported on nightly moonbit toolchain for now
+...
+Error: Sys_error("~/.moon/lib/core/_build/llvm/release/bundle/prelude/prelude.mi: No such file or directory")
+```
+
+LLVMバックエンド向けの標準ライブラリバンドル自体がstableチャンネルにインストールされておらず、`-llvm-target` で任意のトリプル（`aarch64-linux-android21` や `arm64-apple-ios15.0` 等）を試す以前の段階でビルドが成立しない。moonの公式警告文面の通り、この経路を試すには `moon upgrade --dev`（nightlyチャンネルへの切り替え）が前提になる。
+
+##### この調査が結論に与える影響
+
+- **Android(NDK)・iOS実機向けのクロスコンパイルは、2026-08-01時点でのstableチャンネル（moon 0.1.20260729 / moonc v0.10.5+5e7afb0c0）では、公式手段・非公式の手動リンクのいずれによっても実現不可能であることが実測で確定した。** これは「経路Aの評価は当初より前向きに修正される」としてきたこれまでの結論（`foreign_library`のリンク工程だけが欠けており、moonc自体は正しいオブジェクトを吐いている）とは**性質の異なる、より重い制約**である。手動リンクで迂回できたのは「オブジェクトは正しいがリンク工程が配線されていない」ケースに限られ、「対象プラットフォーム向けのオブジェクトそのものが生成されない」ケースには適用できない。
+- 残る唯一の理論上の道筋はnightlyチャンネルのLLVMバックエンド（`-llvm-target`に任意のトリプルを指定）だが、これは (a) 「experimental」と明言されているツールチェーンへの切り替えを要求し、(b) `~/.moon` 配下のグローバルな状態を書き換える、かつ現時点で動いている `scripts/build-native-lib.sh` の再現性（`moon`/`moonc`バージョン固定の前提）を崩しうる、ハードルの高い変更である。加えて、たとえLLVMバックエンドが動いたとしても、Android/iOS向けにMoonBitのランタイム（GC・参照カウント機構含む）が正しく動作する保証はまだ何もなく、これ自体が新たな検証対象になる。
+- 動機の確認（本ノート「動機の確認と評価の更新」節）に立ち返ると、本来の目的は「KotlinMultiplatformのような体験でネイティブアプリなどを作れるヒントになること」だった。**現時点のstableツールチェーンでは、経路Aは『同一ホスト上でFFI境界と所有権/解放規約が正しく動くことの実証』の域を出ず、Android/iOS実機への配布という本来のゴールには到達できていない。** これは経路Aを選んだこと自体の誤りではなく、「経路Aが持つ制約の重心が、当初想定していた場所（`moon`のリンク工程）から、より根本的な場所（`moonc`のターゲット対応範囲）に移った」という評価の更新である。
+
 ### `moonbitlang/moonbit-native-runtime` の実装確認
 
 `include/moonbit.h` （コンパイラのランタイム実装のミラー、生成Cコードとユーザー側Cスタブが共にリンクする対象）より。
@@ -672,6 +728,8 @@ MoonBitの `wasm-gc` バックエンドは、その名の通りWebAssembly GC提
 
 4. ライフタイム管理の設計は、 `moonbit_make_external_object` によるGC自動統合ではなく、UniFFI同様「opaqueハンドル＋明示的close/deinitで呼び出す解放関数」を採用すべき（MoonBitチーム自身の実例= `moonbit-tree-sitter` が明示的方式を選んでいることと整合）。
 
+5. **（2026-08-01追記）上記2の「前向きな修正」は、macOSホスト上での検証に限った話であり、Android/iOS実機への配布には適用できないことが判明した。** moonc（非公開）の `-target` はmacOS/Linux(glibc)/Windowsの4トリプルのみを知っており、Android・iOSのトリプルは一切存在しない（バイナリの文字列調査でも0件）。この欠落は「moonのリンク工程が未配線」という迂回可能な種類の問題ではなく、「moonc自体がそのプラットフォーム向けのコードを生成する手段を持たない」という迂回不可能な種類の問題である。iOS Simulatorへの再リンクによる迂回も、オブジェクトファイルにコンパイル時点で焼き込まれるプラットフォームタグが原因で実測により否定された。したがって**経路Aは現時点で「同一ホスト上でのFFI境界・所有権管理の実証」までしか到達しておらず、当初の動機（Android/iOSアプリへのロジック共有）を満たす配布形態には至っていない。** 唯一残る理論上の道筋（nightlyチャンネルのLLVMバックエンド、`-llvm-target`任意トリプル指定）は未検証。詳細は「経路A」節「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」を参照。
+
 ---
 
 ## 動機の確認と評価の更新
@@ -715,13 +773,14 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - **共有予定ロジックの性質（未着手・優先度高）**: 「Chicory/WasmKitの成熟度」と「性能要件を満たすか」は独立した命題である。前者はツールチェーンの機能対応、後者は実行するワークロードの特性（CPUバウンドな計算か、単なるルーティン処理か）に依存する。共有したいロジックの具体像（種類・計算量のオーダー・呼び出し頻度）をヒアリングし、wasm-gcインタプリタ実行で「許容範囲」とみなせる定量的な基準（例: ネイティブ比何倍まで許容するか）を先に言語化しない限り、Chicory/WasmKitの対応状況を確認しても経路Bの採否は判定できない。特にChicoryは現状インタプリタでのみWasm GCが動くため、この論点は「経路Bを選ぶかどうか」の判断により直接的に効いてくる。
 - nativeターゲットの `foreign_library` ライブラリ成果物export未対応（本ノート「経路A」節、追記2026-07-31）が解消される見込み・時期のIssue追跡。 `moonbitlang/moon` 側に本件を明示的に追跡するIssueが存在しないため、必要なら自ら起票する選択肢がある。
 - ~~経路Aを暫定採用する場合の意思決定~~ → **2026-07-31、ユーザーと合意し経路Aを第一段階として選択。** 以下がこれに伴う新たな残課題。
-- **手動リンクの再現性・保守性の評価（優先度高）**: `spike-native-export/` の手動リンクは `~/.moon/lib` 内の未文書化なファイルレイアウト（ `runtime.o` , `moonbit_simdutf.o` , `simdutf.o` , `libbacktrace.a` ）に依存している。moonのバージョンが上がった際にこの構成が変わらないか、再現性をどう担保するか（例: 使用したmoon/moonc正確なバージョンをビルドスクリプトに固定する等）を検討する必要がある。
+- ~~手動リンクの再現性・保守性の評価~~ → **2026-08-01、`spike-native-export/scripts/build-native-lib.sh` として一部解決。** 手動リンク手順（`moon build --target native` → `export_spike.o` / `runtime.o` / `~/.moon/lib` 配下の補助オブジェクトを集めて `cc -shared`）をスクリプト化し、7つの既存スパイク（Java/Kotlin JNI・Swift・複合型・ライフタイム・解放実装検証の各バリアント）すべてで再ビルド→動作確認まで通ることを実測した。スクリプトは `moon version` / `moonc -v` を最後に検証したバージョンと比較し、不一致時は警告のみ出す（ハードフェイルにはしない）。**ただしこれは「バージョンドリフトを検知しやすくした」だけであり、`~/.moon/lib` のファイルレイアウトが将来変わった場合に自動追従する仕組みではない。** 残る保守性の論点は次の2点: (1) release build（`MOONBIT_NEW_NATIVE`）での再現性は未検証、(2) Android(NDK)/iOS(Xcode)向けクロスコンパイルは、後述のとおり2026-08-01の調査でstableチャンネルでは実現不可能であることが判明した（詳細は「経路A」節の「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」を参照。`scripts/README.md`のスコープ外記載もこれに合わせて更新が必要）。
 - **リリースビルドでの再現確認**: 今回の検証はdebug buildのみ。release build（ `MOONBIT_NEW_NATIVE` 環境変数の値によってコード生成戦略が変わる）でも同じ手動リンク手順が通るかは未確認。
-- **Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン）への展開**: 今回の検証はmacOSホスト上のarm64向けのみ。ABIごとの `.so` / `.a` ビルド、および `libbacktrace` / `simdutf` 相当のクロスコンパイル済みオブジェクトの入手可否は未検証。
+- ~~Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン）への展開~~ → **2026-08-01調査済み。stableチャンネルでは実現不可能であることが判明した**（本ノート「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」節）。moonc v0.10.5+5e7afb0c0 の `-target` は macOS/Linux(glibc)/Windows の4トリプルのみで、Android・iOSは1つも含まれない（バイナリの文字列調査でも確認）。「iOS SimulatorならDarwin系だから再リンクだけで動くのでは」という迂回策も、オブジェクトファイルにコンパイル時に焼き込まれるプラットフォームタグ（`LC_BUILD_VERSION platform=macOS`）が原因でリンカに拒否されることを実測した。唯一の理論上の道筋（nightlyチャンネルのLLVMバックエンド、`-llvm-target`で任意トリプル指定）は未検証のまま残っている（次項）。
 - ~~JNI（Kotlin側）経由の実呼び出し検証~~ → **2026-07-31確認済み**（本ノート「JNI経由でのKotlin/JVM実呼び出し検証」節）。ただしJava経由での代理確認であり、実際のkotlinc出力での確認ではない。
 - ~~kotlinc実機での確認~~ → **2026-08-01確認済み**（本ノート「実際のkotlinc出力での再検証」節）。kotlinc 2.4.10でビルドした `external fun` から、Java検証時と同じMoonBitオブジェクトを使って正しく呼び出せることを確認した。
 - ~~Swift Cモジュールマップ経由の実呼び出し検証~~ → **2026-08-01確認済み**（本ノート「Swift（Cモジュールマップ経由）実呼び出し検証」節）。SwiftPMの`systemLibrary`ターゲット経由で、Java/Kotlin検証と同一手順で再構築したdylibを正しく呼び出せた。
-- **iOS実機/シミュレータ向けの確認（優先度中）**: Swift検証はmacOSホスト・SwiftPM CLIのみ。実際のiOS向けクロスコンパイル・Xcodeプロジェクト経由でのテストは未実施。
+- ~~iOS実機/シミュレータ向けの確認~~ → **2026-08-01、iOS Simulator向けの再リンクは実測でブロックされることを確認した**（上記「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」節）。実機・Xcodeプロジェクト経由のテストはこの前提（moonc自体がiOS向けオブジェクトを生成できない）が解消されない限り意味を持たないため、残課題としては解消ではなく「経路が塞がっていることの確定」という形で決着した。
+- **nightlyチャンネル・LLVMバックエンド（`-llvm-target`）でのAndroid/iOS対応可否（優先度中、未着手）**: `moon upgrade --dev` でnightlyへ切り替えた上で `-llvm-target aarch64-linux-android21` / `arm64-apple-ios15.0` 等を試す道が理論上残っている。ただしこれは (a) 現在動作しているstableチャンネル・`scripts/build-native-lib.sh` の再現性前提を壊しうるグローバルな変更であり、(b) 仮にコード生成が通ってもMoonBitランタイム（GC・参照カウント）がそのプラットフォームで正しく動く保証はまだない。着手前にユーザーとリスクを合意する必要がある。
 - ~~複合型（文字列・構造体）のマーシャリング~~ → **2026-08-01確認済み**（本ノート「複合型のマーシャリング検証」節）。文字列（双方向）・構造体（不透明ハンドル経由）とも正しく動作し、200万回ループでのクラッシュ・リークなしも確認した。
 - ~~長期保持されるMoonBitオブジェクトのライフタイム管理~~ → **2026-08-01確認済み**（本ノート「訂正：長期保持オブジェクトのライフタイム管理を精査した結果」節）。exportされた関数の戻り値は呼び出し元に所有権が完全移譲され、`moonbit_decref`を明示的に1回呼ぶ責任は呼び出し元にある（自動解放されない＝実測でリークを確認）。読むだけのアクセサ関数は引数を消費しない。文字列リテラルはrc=-1のimmortalオブジェクトでincref/decrefが安全なノーオペレーション。
 - ~~JNI/Swift側での解放呼び出しの実装~~ → **2026-08-01確認済み**（本ノート「JNI(Kotlin)・Swift側での実際の解放実装」節）。Kotlinは`AutoCloseable.close()`（JVM GCのfinalizeタイミングが保証されないため必須）、Swiftは`deinit`（ARCが決定的なため明示APIなしで十分）と、言語ごとに異なる解放規約が必要であることを実測で確認した。
