@@ -673,6 +673,39 @@ add(41) = 42
 
 両エミュレータとも実行後にシャットダウンし、起動前の状態に戻した。**これにより、`scripts/build-c-backend-lib.sh`が生成する成果物が、単にシンボル・プラットフォームタグの静的検証を通るだけでなく、実際にiOS Simulator・Androidエミュレータのプロセス内で正しく実行できることを実測で確認した。** 残るのはiOS実デバイス（Simulatorではなくコード署名を要する実機）とAndroid実機（エミュレータではなく物理デバイス）での確認のみである。
 
+#### 複合型マーシャリング・ライフタイム管理のAndroid/iOSでの再現確認（2026-08-01）
+
+本ノート「複合型（文字列・構造体）のマーシャリング検証」節および「訂正：長期保持オブジェクトのライフタイム管理を精査した結果」節はmacOSホストでの検証だった。同じテストコード（`complex-types-test/test_complex.c`、`lifetime-test/lifetime_test.c`）を一切変更せずに、Cバックエンド戦略でiOS Simulator・Androidエミュレータの双方にコンパイル・実行し、再現するかを確認した。両ファイルは元々 `<moonbit.h>` / `<stdio.h>` のみに依存するポータブルな作りだったため、追加の移植作業は不要だった。
+
+```console
+# iOS Simulator
+$ xcrun simctl spawn <device> ./ios_test_complex
+length=19, chars="Hello from MoonBit!"
+string_length("Kotlin") = 6
+point = (3, 4)
+OK
+
+# Androidエミュレータ（adb shell経由）
+$ adb shell /data/local/tmp/android_test_complex
+length=19, chars="Hello from MoonBit!"
+string_length("Kotlin") = 6
+point = (3, 4)
+OK
+```
+
+文字列（MoonBit→C、C→MoonBit双方向）・構造体（不透明ハンドル経由のアクセサ）とも、macOSホストでの結果と完全に一致した。続けて参照カウント規約（`lifetime_test.c`）も同様に確認した。
+
+```console
+# iOS Simulator / Androidエミュレータとも同一の出力
+make_greeting() rc = -1 (raw rc word behavior: -1 means static/immortal)
+after make_point:      rc = 1
+after churn: rc = 1, x = 3, y = 4   # 50万回の無関係な割当てを挟んでも値は無傷
+after incref: rc = 2 / after matching decref: rc = 1
+OK
+```
+
+**「exportされた関数の戻り値は呼び出し元に所有権が完全移譲され、`moonbit_decref`を明示的に1回呼ぶ責任がある」「文字列リテラルはrc=-1のimmortalオブジェクトで安全」という、macOSホストで確立したライフタイム管理の設計が、Cバックエンド経由でiOS Simulator・Androidエミュレータ上でも一字一句同じ挙動で再現することを実測で確認した。** これにより、Kotlin側の`AutoCloseable`ラッパー・Swift側の`deinit`ラッパー（本ノート既出）をAndroid/iOS実機向けに移植する際、所有権規約自体を作り直す必要はなく、JNI/Swiftバインディング層の実装のみをCバックエンド向けのビルド手順に合わせて調整すればよいことが分かった。
+
 ##### この訂正が結論に与える影響
 
 - **「Android(NDK)・iOS実機向けのクロスコンパイルは実現不可能」という2026-08-01の先の結論は誤りであり、撤回する。** 誤りの原因は実験の粒度が粗かったことにある。native ターゲットには「新戦略（Clam→直接マシンコード、`MOONBIT_NEW_NATIVE=1`、debugビルドのデフォルト）」と「Cバックエンド戦略（Clam→ポータブルC、`MOONBIT_NEW_NATIVE=0`、releaseビルドのデフォルト）」の2つがあり、前者だけを検証して「moonc自体がターゲットを知らないから無理」と結論したが、後者ではmoonc自体がターゲットを知る必要が最初からない（コード生成はCテキストで止まり、実際のコンパイルは呼び出し側が用意する任意のCコンパイラが担うため）。
@@ -915,7 +948,7 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - ~~iOS Simulator・Androidエミュレータでの実行確認~~ → **2026-08-01確認済み**（本ノート「iOS Simulator・Androidエミュレータでの実行確認」節）。`scripts/build-c-backend-lib.sh`が生成した成果物を使い、iOS Simulatorは`xcrun simctl spawn`、AndroidエミュレータはAVD（`Medium_Phone`、Android 16/API 36、arm64-v8a）を起動し`adb shell`経由で実行し、いずれも`add(41) = 42`を確認した。
 - **iOS実機（Simulatorではなく実デバイス）での確認（優先度中）**: 今回確認できたのはiOS Simulatorのみ。実デバイス向けは`arm64-apple-ios`（simulatorサフィックスなし）ターゲット、コード署名、実機での実行確認が別途必要。
 - **Android実機（エミュレータではなく物理デバイス）での確認（優先度中）**: 今回確認できたのはエミュレータのみ。物理デバイスでの実行確認は別途必要（エミュレータと同じABI・NDKターゲットのため、大きな差異は想定していないが未検証）。
-- **複合型（文字列・構造体）マーシャリングのAndroid/iOSでの再現確認（優先度中、新規）**: 本ノートで確認済みの複合型マーシャリング・所有権規約（`moonbit_decref`等）はmacOSホストでの検証であり、Cバックエンド経由でAndroid/iOS上でも同様に成立するかは未確認。
+- ~~複合型（文字列・構造体）マーシャリングのAndroid/iOSでの再現確認~~ → **2026-08-01確認済み**（本ノート「複合型マーシャリング・ライフタイム管理のAndroid/iOSでの再現確認」節）。既存のテストコードを無変更のまま、Cバックエンド経由でiOS Simulator・Androidエミュレータ双方にコンパイル・実行し、文字列（双方向）・構造体（不透明ハンドル）・所有権規約（rc=1初期値、明示的decref責務、文字列リテラルのimmortal rc=-1）のすべてがmacOSホストと完全に一致する挙動で再現することを確認した。
 - ~~JNI（Kotlin側）経由の実呼び出し検証~~ → **2026-07-31確認済み**（本ノート「JNI経由でのKotlin/JVM実呼び出し検証」節）。ただしJava経由での代理確認であり、実際のkotlinc出力での確認ではない。
 - ~~kotlinc実機での確認~~ → **2026-08-01確認済み**（本ノート「実際のkotlinc出力での再検証」節）。kotlinc 2.4.10でビルドした `external fun` から、Java検証時と同じMoonBitオブジェクトを使って正しく呼び出せることを確認した。
 - ~~Swift Cモジュールマップ経由の実呼び出し検証~~ → **2026-08-01確認済み**（本ノート「Swift（Cモジュールマップ経由）実呼び出し検証」節）。SwiftPMの`systemLibrary`ターゲット経由で、Java/Kotlin検証と同一手順で再構築したdylibを正しく呼び出せた。
