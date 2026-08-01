@@ -62,13 +62,15 @@ scripts/build-native-lib.sh -o kotlin-release-test/libexportspike_jni_release.dy
 
 ## スコープ外
 
+- このスクリプトは native ターゲットの「新戦略」（`moon build --target native`
+  のデフォルト、Clamから直接マシンコードを生成）専用であり、macOS ホスト上の
+  arm64 向けビルドのみを扱う。
 - Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン、実機/シミュレータ）
-  向けのビルドはこのスクリプトの対象外。今のところ macOS ホスト上の arm64 向け
-  ビルドのみを扱う。**2026-08-01の調査で、これは単なる未実装ではなく現行の
-  stableチャンネルでは原理的に不可能であることが判明した**（`moonc` の
-  `-target` はmacOS/Linux(glibc)/WindowsのみでAndroid/iOSのトリプルを持たず、
-  iOS Simulator向けの再リンクによる迂回も、オブジェクトに焼き込まれる
-  プラットフォームタグが原因でリンカに拒否される。詳細は `../research.md`
-  の「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」節を参照）。
-- release build（`MOONBIT_NEW_NATIVE` によるコード生成戦略の違い）での再現性は
-  未検証。
+  向けのビルドは**このスクリプトの対象外だが、実現不可能ではない**。
+  2026-08-01の調査で、`moon build --target native --release`（＝Cバックエンド
+  戦略、`MOONBIT_NEW_NATIVE=0`と同義）が出力するポータブルなC99ソース
+  （`export_spike.c` / `~/.moon/lib/runtime.c`）を NDK/Xcode の clang で直接
+  コンパイルすれば、iOS Simulator・Android実機の双方で動作することを実測で
+  確認した（詳細は `../research.md` の「訂正：moonc の『Cバックエンド』経由で
+  Android/iOSともに実機で動作した」節を参照）。このスクリプトをCバックエンド
+  戦略に対応させる作業は `../research.md` の残課題として別途追跡している。

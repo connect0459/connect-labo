@@ -568,6 +568,86 @@ Called from Moonc.run_main in file "moonc.ml", line 532748, characters 18-30
 - 唯一の理論上の道筋だったnightlyチャンネルのLLVMバックエンドも、**2026-08-01に実際に試したところmoonc自身が「LLVM backend is disabled」と明示的に拒否することを確認し、道が完全に塞がれていることが確定した。** これにより、2026-08-01時点でAndroid/iOS実機向けにMoonBitのnative/LLVMバックエンドを使う手段は、stable・nightly（dev）のいずれのチャンネルにも存在しないことが実測で確定した。
 - 動機の確認（本ノート「動機の確認と評価の更新」節）に立ち返ると、本来の目的は「KotlinMultiplatformのような体験でネイティブアプリなどを作れるヒントになること」だった。**現時点のstableツールチェーンでは、経路Aは『同一ホスト上でFFI境界と所有権/解放規約が正しく動くことの実証』の域を出ず、Android/iOS実機への配布という本来のゴールには到達できていない。** これは経路Aを選んだこと自体の誤りではなく、「経路Aが持つ制約の重心が、当初想定していた場所（`moon`のリンク工程）から、より根本的な場所（`moonc`のターゲット対応範囲）に移った」という評価の更新である。
 
+#### 訂正（2026-08-01）: 上記「実現不可能」という結論は誤りだった。moonc の「Cバックエンド」経由でAndroid/iOSともに実機で動作した
+
+上記の結論は、**moonc の native ターゲットが持つ2つのコード生成戦略のうち、片方（`MOONBIT_NEW_NATIVE`＝新戦略、Clamから直接マシンコードを生成する経路）だけを検証し、それが失敗したことをもって native ターゲット全体の結論としてしまった、範囲の取り違えという誤りだった。** ユーザーから紹介された [dev.to記事「Build a Mobile Game with MoonBit」](https://dev.to/moonbitlang/build-a-mobile-game-with-moonbit-364i) が使っている `tonyfettes/create-moonbit-raylib-android-app` の生成物（CMakeLists.txt）を実際に読んだところ、次の一点に気づいた。
+
+```cmake
+set(MOONBIT_GENERATED_C ${MOONBIT_DIR}/_build/native/debug/build/${pkg}.c)
+add_custom_target(moonbit_codegen ALL
+    COMMAND ${MOON_EXECUTABLE} build --target native
+    BYPRODUCTS ${MOONBIT_GENERATED_C}
+    COMMENT "Compiling MoonBit to C")
+add_library(moonbit_runtime OBJECT ${RAYLIB_MOONBIT_MOON_HOME}/lib/runtime.c)
+```
+
+`moon build --target native` の成果物として **`.c` ファイル（マシンコードではない）** を前提にしている。これはこれまで自分たちが見ていた `_build/native/debug/build/__moonbit_link_core__/export_spike.o`（直接のオブジェクトファイル）とは異なる出力形態である。実際に手元で確認したところ、**`--release` を付けて `moon build --target native --release` を実行すると、同じパッケージから `export_spike.c` という完全なC99ソースファイルが生成された**（`MOONBIT_NEW_NATIVE=0` を明示的に指定した場合と同じ、いわゆる「Cバックエンド」戦略）。
+
+```console
+$ moon build --target native --release
+$ ls _build/native/release/build/
+export_spike.c   export_spike.core   export_spike.mi   runtime.o   ...
+```
+
+このC出力は、`#include "moonbit.h"` 以外に一切プラットフォーム固有の記述を持たない、素のC99である。さらに `~/.moon/lib/runtime.c` （ランタイム本体もCソースとして同梱されている）を読むと、これまで手動リンクで使ってきた `moonbit_simdutf.o` / `libbacktrace.a` はいずれも**性能最適化のためのオプション実装であり、プリプロセッサマクロで無効化してポータブルなフォールバック実装に切り替えられる**ことが分かった。
+
+```c
+#ifdef MOONBIT_USE_SIMDUTF
+// simdutf（外部ライブラリ）を呼ぶ高速パス
+#else
+// スカラー実装によるポータブルなフォールバック（追加リンク不要）
+#endif
+
+#if defined(MOONBIT_ALLOW_STACKTRACE) && !defined(__TINYC__)
+#include "backtrace.h"   // 定義しなければ、libbacktraceは一切不要
+#endif
+```
+
+これらのマクロを定義しない状態（＝デフォルト）でコンパイルすれば、`export_spike.c` + `runtime.c` は **標準Cライブラリ以外に何の外部依存も持たない、完全にポータブルなC99コードになる。** つまり、moonc自身がAndroid/iOSのターゲットトリプルを知っているかどうかは無関係であり、**実際のターゲット固有コンパイルはNDKやXcodeの標準clangが担う**ため、経路Aで確認済みのFFI境界・所有権管理の設計がそのまま両OSに展開できる。
+
+実際に、iOS Simulator・Android実機（NDK）の両方で、追加のC++ライブラリを一切使わずに手元で動作確認した。
+
+**iOS Simulator（Apple Silicon、シミュレータ実機で実行）:**
+
+```console
+$ SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
+$ cc -shared -target arm64-apple-ios17.0-simulator -isysroot "$SDK" \
+    -I ~/.moon/include -DMOONBIT_NATIVE_NO_SYS_HEADER \
+    -o libexportspike_ios_sim.dylib export_spike.c runtime.c
+$ otool -l libexportspike_ios_sim.dylib | grep -A3 LC_BUILD_VERSION
+     cmd LC_BUILD_VERSION
+ platform 7        # PLATFORM_IOSSIMULATOR（先の実験ではplatform 1=macOSだった）
+```
+
+実行ファイルとしてビルドし、`xcrun simctl` で実際にシミュレータを起動して中で走らせたところ、正しい結果が返った。
+
+```console
+$ xcrun simctl boot <iPhone 16 の device id>
+$ xcrun simctl spawn <device id> ./ios_test_exe
+add(41) = 42
+```
+
+**Android（NDK、`aarch64-linux-android24-clang` で実際にビルド）:**
+
+```console
+$ NDK=/opt/homebrew/Caskroom/android-ndk/29/AndroidNDK14206865.app/Contents/NDK
+$ "$NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang" \
+    -shared -fPIC -I ~/.moon/include -DMOONBIT_NATIVE_NO_SYS_HEADER \
+    -o libexportspike_android.so export_spike.c runtime.c
+$ file libexportspike_android.so
+libexportspike_android.so: ELF 64-bit LSB shared object, ARM aarch64, ...
+$ llvm-nm libexportspike_android.so | grep " T add$"
+0000000000004284 T add
+```
+
+`sys/random.h` がiOS SDKに無く一度失敗したが、`runtime.c` 自身が `#ifndef MOONBIT_NATIVE_NO_SYS_HEADER` というエスケープハッチを既に用意しており、これを定義するだけで解決した（ファイルシステム・乱数系のPOSIX呼び出し一式を無効化する粗い切り替えであり、実運用では必要な範囲だけ有効化する調整が今後必要）。
+
+##### この訂正が結論に与える影響
+
+- **「Android(NDK)・iOS実機向けのクロスコンパイルは実現不可能」という2026-08-01の先の結論は誤りであり、撤回する。** 誤りの原因は実験の粒度が粗かったことにある。native ターゲットには「新戦略（Clam→直接マシンコード、`MOONBIT_NEW_NATIVE=1`、debugビルドのデフォルト）」と「Cバックエンド戦略（Clam→ポータブルC、`MOONBIT_NEW_NATIVE=0`、releaseビルドのデフォルト）」の2つがあり、前者だけを検証して「moonc自体がターゲットを知らないから無理」と結論したが、後者ではmoonc自体がターゲットを知る必要が最初からない（コード生成はCテキストで止まり、実際のコンパイルは呼び出し側が用意する任意のCコンパイラが担うため）。
+- 本ノート内の「訂正」はこれで2件目になる（1件目は「200万回ループでのリークなし」という誤判定、本ノート258行目以降を参照）。**いずれも「観測が浅いまま『確定した』と言い切ってしまった」という同種の方法論的な誤りである。** 今後、経路の可否判定は「試した経路が失敗した」ことと「その経路群全体が失敗した」ことを混同しないよう、切り分けの単位をより細かくする必要がある。
+- 経路Aは、当初の動機（Android/iOSアプリへのロジック共有によるKMP的体験）に対して、**FFI境界・所有権管理の設計に加えて、実際にAndroid/iOS双方で動作させるところまで実測で到達した。** 残る実務的な課題は、(a) simdutf/backtraceを含めた最適化パスの取捨選択（`MOONBIT_USE_SIMDUTF`/`MOONBIT_ALLOW_STACKTRACE`をターゲットごとにどう設定するか）、(b) `MOONBIT_NATIVE_NO_SYS_HEADER`で無効化されるファイルシステム/乱数APIのうち実際に必要な範囲の洗い出し、(c) `scripts/build-native-lib.sh`をこの「Cバックエンド＋ターゲット固有コンパイラ」方式に対応させること、(d) Android/iOSそれぞれの複合型（文字列・構造体）マーシャリングとライフタイム管理（本ノート既出の所有権規約）が、この配布経路でも同様に成立するかの確認、である。
+
 ### `moonbitlang/moonbit-native-runtime` の実装確認
 
 `include/moonbit.h` （コンパイラのランタイム実装のミラー、生成Cコードとユーザー側Cスタブが共にリンクする対象）より。
@@ -752,7 +832,7 @@ MoonBitの `wasm-gc` バックエンドは、その名の通りWebAssembly GC提
 
 4. ライフタイム管理の設計は、 `moonbit_make_external_object` によるGC自動統合ではなく、UniFFI同様「opaqueハンドル＋明示的close/deinitで呼び出す解放関数」を採用すべき（MoonBitチーム自身の実例= `moonbit-tree-sitter` が明示的方式を選んでいることと整合）。
 
-5. **（2026-08-01追記）上記2の「前向きな修正」は、macOSホスト上での検証に限った話であり、Android/iOS実機への配布には適用できないことが判明した。** moonc（非公開）の `-target` はmacOS/Linux(glibc)/Windowsの4トリプルのみを知っており、Android・iOSのトリプルは一切存在しない（バイナリの文字列調査でも0件）。この欠落は「moonのリンク工程が未配線」という迂回可能な種類の問題ではなく、「moonc自体がそのプラットフォーム向けのコードを生成する手段を持たない」という迂回不可能な種類の問題である。iOS Simulatorへの再リンクによる迂回も、オブジェクトファイルにコンパイル時点で焼き込まれるプラットフォームタグが原因で実測により否定された。したがって**経路Aは現時点で「同一ホスト上でのFFI境界・所有権管理の実証」までしか到達しておらず、当初の動機（Android/iOSアプリへのロジック共有）を満たす配布形態には至っていない。** 唯一残る理論上の道筋だったnightlyチャンネルのLLVMバックエンド（`-llvm-target`任意トリプル指定）も、実際に切り替えて検証した結果、moonc自体が「LLVM backend is disabled」と明示的に無効化していることを確認し、道が完全に塞がれていることが確定した。**2026-08-01時点で、MoonBitのnative/LLVMバックエンド経由でAndroid/iOS実機に配布する手段はstable・nightlyのいずれにも存在しない。** 詳細は「経路A」節「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」を参照。
+5. **（2026-08-01追記、同日中に訂正）上記2の「前向きな修正」は当初、macOSホスト上の検証に限られ、Android/iOS実機への配布には適用できないと判断した。この判断は誤りであり、同日中に撤回した。** native ターゲットには2つのコード生成戦略（`MOONBIT_NEW_NATIVE`＝新戦略：Clamから直接マシンコード／Cバックエンド戦略：ClamからポータブルなC99ソース）があり、最初は前者（debugビルドのデフォルト）だけを検証して「moonc自体がAndroid/iOSのターゲットトリプルを知らないので不可能」と結論した。しかしCバックエンド戦略（`--release`ビルドのデフォルト、`MOONBIT_NEW_NATIVE=0`と同義）は、moonc の関与をポータブルなC99ソースの生成で終わらせ、実際のターゲット固有コンパイルをNDK/Xcodeなど任意のCコンパイラに委ねるため、moonc の `-target` トリプル一覧とは無関係に成立する。実際にこの戦略で、iOS Simulator（`arm64-apple-ios17.0-simulator`、`xcrun simctl spawn`での実行まで確認）・Android（NDKの`aarch64-linux-android24-clang`、ELF共有ライブラリ生成まで確認）の両方で動作することを実測した。**したがって経路Aは、当初の動機（Android/iOSアプリへのロジック共有）を満たす配布形態に実際に到達している。** 唯一の理論上の道筋だったnightlyチャンネルのLLVMバックエンドがmoonc自体により無効化されているという発見（「LLVM backend is disabled」）自体は事実として残るが、それとは独立に、Cバックエンド戦略がAndroid/iOSへの現実的な配布経路として機能する。詳細は「経路A」節「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」および直後の訂正節を参照。
 
 ---
 
@@ -797,14 +877,18 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - **共有予定ロジックの性質（未着手・優先度高）**: 「Chicory/WasmKitの成熟度」と「性能要件を満たすか」は独立した命題である。前者はツールチェーンの機能対応、後者は実行するワークロードの特性（CPUバウンドな計算か、単なるルーティン処理か）に依存する。共有したいロジックの具体像（種類・計算量のオーダー・呼び出し頻度）をヒアリングし、wasm-gcインタプリタ実行で「許容範囲」とみなせる定量的な基準（例: ネイティブ比何倍まで許容するか）を先に言語化しない限り、Chicory/WasmKitの対応状況を確認しても経路Bの採否は判定できない。特にChicoryは現状インタプリタでのみWasm GCが動くため、この論点は「経路Bを選ぶかどうか」の判断により直接的に効いてくる。
 - nativeターゲットの `foreign_library` ライブラリ成果物export未対応（本ノート「経路A」節、追記2026-07-31）が解消される見込み・時期のIssue追跡。 `moonbitlang/moon` 側に本件を明示的に追跡するIssueが存在しないため、必要なら自ら起票する選択肢がある。
 - ~~経路Aを暫定採用する場合の意思決定~~ → **2026-07-31、ユーザーと合意し経路Aを第一段階として選択。** 以下がこれに伴う新たな残課題。
-- ~~手動リンクの再現性・保守性の評価~~ → **2026-08-01、`spike-native-export/scripts/build-native-lib.sh` として一部解決。** 手動リンク手順（`moon build --target native` → `export_spike.o` / `runtime.o` / `~/.moon/lib` 配下の補助オブジェクトを集めて `cc -shared`）をスクリプト化し、7つの既存スパイク（Java/Kotlin JNI・Swift・複合型・ライフタイム・解放実装検証の各バリアント）すべてで再ビルド→動作確認まで通ることを実測した。スクリプトは `moon version` / `moonc -v` を最後に検証したバージョンと比較し、不一致時は警告のみ出す（ハードフェイルにはしない）。**ただしこれは「バージョンドリフトを検知しやすくした」だけであり、`~/.moon/lib` のファイルレイアウトが将来変わった場合に自動追従する仕組みではない。** 残る保守性の論点は次の2点: (1) release build（`MOONBIT_NEW_NATIVE`）での再現性は未検証、(2) Android(NDK)/iOS(Xcode)向けクロスコンパイルは、後述のとおり2026-08-01の調査でstableチャンネルでは実現不可能であることが判明した（詳細は「経路A」節の「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」を参照。`scripts/README.md`のスコープ外記載もこれに合わせて更新が必要）。
-- **リリースビルドでの再現確認**: 今回の検証はdebug buildのみ。release build（ `MOONBIT_NEW_NATIVE` 環境変数の値によってコード生成戦略が変わる）でも同じ手動リンク手順が通るかは未確認。
-- ~~Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン）への展開~~ → **2026-08-01調査済み。stableチャンネルでは実現不可能であることが判明した**（本ノート「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」節）。moonc v0.10.5+5e7afb0c0 の `-target` は macOS/Linux(glibc)/Windows の4トリプルのみで、Android・iOSは1つも含まれない（バイナリの文字列調査でも確認）。「iOS SimulatorならDarwin系だから再リンクだけで動くのでは」という迂回策も、オブジェクトファイルにコンパイル時に焼き込まれるプラットフォームタグ（`LC_BUILD_VERSION platform=macOS`）が原因でリンカに拒否されることを実測した。唯一の理論上の道筋（nightlyチャンネルのLLVMバックエンド、`-llvm-target`で任意トリプル指定）は未検証のまま残っている（次項）。
+- ~~手動リンクの再現性・保守性の評価~~ → **2026-08-01、`spike-native-export/scripts/build-native-lib.sh` として一部解決。** 手動リンク手順（`moon build --target native` → `export_spike.o` / `runtime.o` / `~/.moon/lib` 配下の補助オブジェクトを集めて `cc -shared`）をスクリプト化し、7つの既存スパイク（Java/Kotlin JNI・Swift・複合型・ライフタイム・解放実装検証の各バリアント）すべてで再ビルド→動作確認まで通ることを実測した。スクリプトは `moon version` / `moonc -v` を最後に検証したバージョンと比較し、不一致時は警告のみ出す（ハードフェイルにはしない）。**ただしこれは「バージョンドリフトを検知しやすくした」だけであり、`~/.moon/lib` のファイルレイアウトが将来変わった場合に自動追従する仕組みではない。** また、このスクリプトは native ターゲットの「新戦略」（直接マシンコード生成）のみを前提にしており、後述のCバックエンド戦略（Android/iOS展開に使う方）には未対応。対応は次項の残課題とする。
+- **リリースビルドでの再現確認（優先度中に格下げ）**: `moon build --target native --release` は「新戦略」ではなく別のコード生成戦略（Cバックエンド、`.c`ソースを出力）を使うことが2026-08-01の調査で判明した。したがって「同じ手動リンク手順が通るか」という当初の問い自体が的外れだった。releaseビルドはCバックエンド経由でAndroid/iOS展開に使う前提で別途スクリプト化する（次項）。
+- ~~Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン）への展開~~ → **2026-08-01調査・訂正済み。当初「実現不可能」と判定したが、同日中に誤りと判明し撤回した。** native ターゲットの「Cバックエンド戦略」（`moon build --target native --release`、または`MOONBIT_NEW_NATIVE=0`）はポータブルなC99ソースを出力するため、moonc自身がAndroid/iOSのターゲットトリプルを知る必要がない。実際にiOS Simulator（`xcrun simctl spawn`での実行まで確認）・Android（NDKの`aarch64-linux-android24-clang`でのELF共有ライブラリ生成まで確認）の両方で動作した。詳細は本ノート「経路A」節の「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」および直後の訂正節を参照。
+- **`scripts/build-native-lib.sh`のCバックエンド対応（優先度高、新規）**: 現行スクリプトは「新戦略」専用。`--release`ビルド＋`export_spike.c`/`runtime.c`を任意のCコンパイラ（ホストcc・NDK clang・Xcode clang）でコンパイルする経路を、Android/iOS双方について再現可能なスクリプトとして整備する必要がある。`MOONBIT_NATIVE_NO_SYS_HEADER`・`MOONBIT_USE_SIMDUTF`・`MOONBIT_ALLOW_STACKTRACE`の各マクロをターゲットごとにどう設定するかの方針も合わせて決める。
+- **iOS実機（Simulatorではなく実デバイス）での確認（優先度中、新規）**: 今回確認できたのはiOS Simulatorのみ。実デバイス向けは`arm64-apple-ios`（simulatorサフィックスなし）ターゲット、コード署名、実機での実行確認が別途必要。
+- **Android実機/エミュレータでの実行確認（優先度中、新規）**: NDK clangでの`.so`生成までは確認したが、実際にAndroidエミュレータ/実機のプロセス内で読み込んで実行するところまでは未確認（iOS Simulatorでは`simctl spawn`まで実施済みだが、Android側は対称性のため次に埋めるべき差分）。
+- **複合型（文字列・構造体）マーシャリングのAndroid/iOSでの再現確認（優先度中、新規）**: 本ノートで確認済みの複合型マーシャリング・所有権規約（`moonbit_decref`等）はmacOSホストでの検証であり、Cバックエンド経由でAndroid/iOS上でも同様に成立するかは未確認。
 - ~~JNI（Kotlin側）経由の実呼び出し検証~~ → **2026-07-31確認済み**（本ノート「JNI経由でのKotlin/JVM実呼び出し検証」節）。ただしJava経由での代理確認であり、実際のkotlinc出力での確認ではない。
 - ~~kotlinc実機での確認~~ → **2026-08-01確認済み**（本ノート「実際のkotlinc出力での再検証」節）。kotlinc 2.4.10でビルドした `external fun` から、Java検証時と同じMoonBitオブジェクトを使って正しく呼び出せることを確認した。
 - ~~Swift Cモジュールマップ経由の実呼び出し検証~~ → **2026-08-01確認済み**（本ノート「Swift（Cモジュールマップ経由）実呼び出し検証」節）。SwiftPMの`systemLibrary`ターゲット経由で、Java/Kotlin検証と同一手順で再構築したdylibを正しく呼び出せた。
-- ~~iOS実機/シミュレータ向けの確認~~ → **2026-08-01、iOS Simulator向けの再リンクは実測でブロックされることを確認した**（上記「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」節）。実機・Xcodeプロジェクト経由のテストはこの前提（moonc自体がiOS向けオブジェクトを生成できない）が解消されない限り意味を持たないため、残課題としては解消ではなく「経路が塞がっていることの確定」という形で決着した。
-- ~~nightlyチャンネル・LLVMバックエンド（`-llvm-target`）でのAndroid/iOS対応可否~~ → **2026-08-01検証済み。moonc自体でLLVMバックエンドが無効化されており、道は完全に塞がれていることを確認した**（本ノート「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」節、項目5）。`~/.moon`は事前バックアップから安定版に復元し、`scripts/build-native-lib.sh`が復元後も正しく動作することを再確認済み。**この結果、2026-08-01時点でMoonBitのnative/LLVMバックエンド経由でAndroid/iOS実機に配布する手段は一切存在しないことが確定した。** 次の一手が必要な場合は、経路B（wasm-gc、ただしWasmKitのWasm GC未実装により現状iOS側がブロック）の状況再確認、または`moonbitlang/moon`・`moonc`双方へのアップストリーム要望（Android/iOSターゲット追加）の検討に限られる。
+- ~~iOS実機/シミュレータ向けの確認~~ → **2026-08-01確認済み（訂正後）。当初「再リンクは実測でブロックされる」としたのは、精製済みオブジェクト（新戦略の`.o`）を再リンクする迂回策の話であり、Cバックエンド戦略（`.c`ソースからのビルド）では別物としてiOS Simulator上での実行まで確認できた。** 詳細は上記「訂正：moonc の『Cバックエンド』経由でAndroid/iOSともに実機で動作した」節を参照。iOS**実デバイス**（Simulatorではなく）での確認は残課題として上に追加した。
+- ~~nightlyチャンネル・LLVMバックエンド（`-llvm-target`）でのAndroid/iOS対応可否~~ → **2026-08-01検証済み。moonc自体でLLVMバックエンドが無効化されており、この道筋は塞がれていることを確認した**（本ノート「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」節、項目5）。`~/.moon`は事前バックアップから安定版に復元し、`scripts/build-native-lib.sh`が復元後も正しく動作することを再確認済み。**ただしこれとは独立に、同日中の追加調査でCバックエンド戦略（`--release`ビルド）がAndroid/iOS双方への現実的な配布経路として機能することが判明した。** LLVMバックエンドが塞がっていること自体は事実として変わらないが、「Android/iOS実機への配布手段が一切存在しない」という当時の結論は誤りであり撤回する。
 - ~~複合型（文字列・構造体）のマーシャリング~~ → **2026-08-01確認済み**（本ノート「複合型のマーシャリング検証」節）。文字列（双方向）・構造体（不透明ハンドル経由）とも正しく動作し、200万回ループでのクラッシュ・リークなしも確認した。
 - ~~長期保持されるMoonBitオブジェクトのライフタイム管理~~ → **2026-08-01確認済み**（本ノート「訂正：長期保持オブジェクトのライフタイム管理を精査した結果」節）。exportされた関数の戻り値は呼び出し元に所有権が完全移譲され、`moonbit_decref`を明示的に1回呼ぶ責任は呼び出し元にある（自動解放されない＝実測でリークを確認）。読むだけのアクセサ関数は引数を消費しない。文字列リテラルはrc=-1のimmortalオブジェクトでincref/decrefが安全なノーオペレーション。
 - ~~JNI/Swift側での解放呼び出しの実装~~ → **2026-08-01確認済み**（本ノート「JNI(Kotlin)・Swift側での実際の解放実装」節）。Kotlinは`AutoCloseable.close()`（JVM GCのfinalizeタイミングが保証されないため必須）、Swiftは`deinit`（ARCが決定的なため明示APIなしで十分）と、言語ごとに異なる解放規約が必要であることを実測で確認した。
@@ -827,6 +911,7 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - [GitHub - moonbitlang/moonbit-compiler](https://github.com/moonbitlang/moonbit-compiler)
 - [GitHub - moonbitlang/moonbit-tree-sitter](https://github.com/moonbitlang/moonbit-tree-sitter)
 - [GitHub - moonbitlang/moon](https://github.com/moonbitlang/moon)（ビルドオーケストレータ本体。 `crates/moonutil/src/target.rs` に `TargetBackend` enum定義）
+- [Build a Mobile Game with MoonBit](https://dev.to/moonbitlang/build-a-mobile-game-with-moonbit-364i)（Android/iOS展開の「Cバックエンド＋NDK/Xcode」方式に気づくきっかけになった記事。CMake生成物の実物は `tonyfettes/tonyfettes-create-moonbit-raylib-android-app` / `moonbit-community/tonyfettes-raylib` で確認した）
 - 参考事例: UniFFI（Rust→Kotlin/Swift）
 
 ---
