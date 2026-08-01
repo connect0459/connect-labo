@@ -642,6 +642,37 @@ $ llvm-nm libexportspike_android.so | grep " T add$"
 
 `sys/random.h` がiOS SDKに無く一度失敗したが、`runtime.c` 自身が `#ifndef MOONBIT_NATIVE_NO_SYS_HEADER` というエスケープハッチを既に用意しており、これを定義するだけで解決した（ファイルシステム・乱数系のPOSIX呼び出し一式を無効化する粗い切り替えであり、実運用では必要な範囲だけ有効化する調整が今後必要）。
 
+#### iOS Simulator・Androidエミュレータでの実行確認（2026-08-01、`scripts/build-c-backend-lib.sh`の成果物を使用）
+
+上記はコマンドラインでの単発コンパイル確認だったため、新設した `scripts/build-c-backend-lib.sh` が実際に生成する成果物を使い、双方のエミュレータ環境で実行するところまで確認した。
+
+**iOS Simulator:** スクリプトが生成した `libexportspike_ios_sim.dylib` に対し、これをリンクする小さな実行ファイルを作成し、`xcrun simctl boot` で起動したシミュレータ内で `xcrun simctl spawn` を使い実行した。
+
+```console
+$ cc -target arm64-apple-ios17.0-simulator -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
+    -o ios_test_exe ios_test_main.c -L. -lexportspike_ios_sim -Wl,-rpath,.
+$ xcrun simctl boot <iPhone 16>
+$ xcrun simctl spawn <iPhone 16> ./ios_test_exe
+add(41) = 42
+```
+
+**Androidエミュレータ:** ローカルに既存だったAVD（`Medium_Phone`、Android 16 / API 36、`arm64-v8a`システムイメージ）を `emulator -no-window` でヘッドレス起動し、`adb`経由でMoonBit生成コード込みの実行ファイルを転送・実行した。
+
+```console
+$ emulator -avd Medium_Phone -no-window -no-audio -no-boot-anim &
+$ adb wait-for-device && adb shell getprop sys.boot_completed   # => 1
+$ adb shell getprop ro.product.cpu.abi                          # => arm64-v8a（NDKビルドと一致）
+$ $NDK/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang \
+    -o android_test_exe -I ~/.moon/include -DMOONBIT_NATIVE_NO_SYS_HEADER \
+    android_test_main.c export_spike.c ~/.moon/lib/runtime.c
+$ adb push android_test_exe /data/local/tmp/android_test_exe
+$ adb shell chmod +x /data/local/tmp/android_test_exe
+$ adb shell /data/local/tmp/android_test_exe
+add(41) = 42
+```
+
+両エミュレータとも実行後にシャットダウンし、起動前の状態に戻した。**これにより、`scripts/build-c-backend-lib.sh`が生成する成果物が、単にシンボル・プラットフォームタグの静的検証を通るだけでなく、実際にiOS Simulator・Androidエミュレータのプロセス内で正しく実行できることを実測で確認した。** 残るのはiOS実デバイス（Simulatorではなくコード署名を要する実機）とAndroid実機（エミュレータではなく物理デバイス）での確認のみである。
+
 ##### この訂正が結論に与える影響
 
 - **「Android(NDK)・iOS実機向けのクロスコンパイルは実現不可能」という2026-08-01の先の結論は誤りであり、撤回する。** 誤りの原因は実験の粒度が粗かったことにある。native ターゲットには「新戦略（Clam→直接マシンコード、`MOONBIT_NEW_NATIVE=1`、debugビルドのデフォルト）」と「Cバックエンド戦略（Clam→ポータブルC、`MOONBIT_NEW_NATIVE=0`、releaseビルドのデフォルト）」の2つがあり、前者だけを検証して「moonc自体がターゲットを知らないから無理」と結論したが、後者ではmoonc自体がターゲットを知る必要が最初からない（コード生成はCテキストで止まり、実際のコンパイルは呼び出し側が用意する任意のCコンパイラが担うため）。
@@ -881,8 +912,9 @@ MoonBit経由のアプローチは、このいずれも完全には満たさな�
 - **リリースビルドでの再現確認（優先度中に格下げ）**: `moon build --target native --release` は「新戦略」ではなく別のコード生成戦略（Cバックエンド、`.c`ソースを出力）を使うことが2026-08-01の調査で判明した。したがって「同じ手動リンク手順が通るか」という当初の問い自体が的外れだった。releaseビルドはCバックエンド経由でAndroid/iOS展開に使う前提で別途スクリプト化する（次項）。
 - ~~Android（NDKクロスコンパイル）・iOS（Xcodeツールチェーン）への展開~~ → **2026-08-01調査・訂正済み。当初「実現不可能」と判定したが、同日中に誤りと判明し撤回した。** native ターゲットの「Cバックエンド戦略」（`moon build --target native --release`、または`MOONBIT_NEW_NATIVE=0`）はポータブルなC99ソースを出力するため、moonc自身がAndroid/iOSのターゲットトリプルを知る必要がない。実際にiOS Simulator（`xcrun simctl spawn`での実行まで確認）・Android（NDKの`aarch64-linux-android24-clang`でのELF共有ライブラリ生成まで確認）の両方で動作した。詳細は本ノート「経路A」節の「Android(NDK)/iOS実機向けクロスコンパイルの実行可能性調査」および直後の訂正節を参照。
 - ~~`scripts/build-native-lib.sh`のCバックエンド対応~~ → **2026-08-01、`spike-native-export/scripts/build-c-backend-lib.sh`として解決。** `--release`ビルド＋`export_spike.c`/`runtime.c`を任意のCコンパイラでコンパイルするスクリプトを新設し、ホストmacOS・iOS Simulator（`-target arm64-apple-ios17.0-simulator`）・Android（NDKの`aarch64-linux-android24-clang`）の3ターゲットすべてで再ビルド→シンボル/プラットフォームタグの検証まで実測した。`MOONBIT_USE_SIMDUTF`・`MOONBIT_ALLOW_STACKTRACE`のターゲットごとの取捨選択方針、および`MOONBIT_NATIVE_NO_SYS_HEADER`が無効化する範囲の精査は未解決のまま残り、`scripts/README.md`の「既知の未解決事項」に記載した。
-- **iOS実機（Simulatorではなく実デバイス）での確認（優先度中、新規）**: 今回確認できたのはiOS Simulatorのみ。実デバイス向けは`arm64-apple-ios`（simulatorサフィックスなし）ターゲット、コード署名、実機での実行確認が別途必要。
-- **Android実機/エミュレータでの実行確認（優先度中、新規）**: NDK clangでの`.so`生成までは確認したが、実際にAndroidエミュレータ/実機のプロセス内で読み込んで実行するところまでは未確認（iOS Simulatorでは`simctl spawn`まで実施済みだが、Android側は対称性のため次に埋めるべき差分）。
+- ~~iOS Simulator・Androidエミュレータでの実行確認~~ → **2026-08-01確認済み**（本ノート「iOS Simulator・Androidエミュレータでの実行確認」節）。`scripts/build-c-backend-lib.sh`が生成した成果物を使い、iOS Simulatorは`xcrun simctl spawn`、AndroidエミュレータはAVD（`Medium_Phone`、Android 16/API 36、arm64-v8a）を起動し`adb shell`経由で実行し、いずれも`add(41) = 42`を確認した。
+- **iOS実機（Simulatorではなく実デバイス）での確認（優先度中）**: 今回確認できたのはiOS Simulatorのみ。実デバイス向けは`arm64-apple-ios`（simulatorサフィックスなし）ターゲット、コード署名、実機での実行確認が別途必要。
+- **Android実機（エミュレータではなく物理デバイス）での確認（優先度中）**: 今回確認できたのはエミュレータのみ。物理デバイスでの実行確認は別途必要（エミュレータと同じABI・NDKターゲットのため、大きな差異は想定していないが未検証）。
 - **複合型（文字列・構造体）マーシャリングのAndroid/iOSでの再現確認（優先度中、新規）**: 本ノートで確認済みの複合型マーシャリング・所有権規約（`moonbit_decref`等）はmacOSホストでの検証であり、Cバックエンド経由でAndroid/iOS上でも同様に成立するかは未確認。
 - ~~JNI（Kotlin側）経由の実呼び出し検証~~ → **2026-07-31確認済み**（本ノート「JNI経由でのKotlin/JVM実呼び出し検証」節）。ただしJava経由での代理確認であり、実際のkotlinc出力での確認ではない。
 - ~~kotlinc実機での確認~~ → **2026-08-01確認済み**（本ノート「実際のkotlinc出力での再検証」節）。kotlinc 2.4.10でビルドした `external fun` から、Java検証時と同じMoonBitオブジェクトを使って正しく呼び出せることを確認した。
