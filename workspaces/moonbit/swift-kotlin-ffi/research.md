@@ -836,8 +836,7 @@ MoonBit Public Source License（relaxed SSPL）:
 
 - `wasm-gc` ターゲットでは `pub fn` による明示的exportと `moon.pkg.json` での制御が可能。非数値の戻り値は `externref` （ホスト側からは不透明な参照）としてラップされる設計がコンパイラの標準機能として既に存在する。GC境界をまたいでオブジェクトの内部を共有しない、という正しい設計方針が最初から組み込まれている。
 
-- MoonBitはBytecode AllianceのWasm Component Model（言語非依存のインターフェース定義=WITから各言語バインディングを生成する標準規格）に対応した実装ページを持つ
-  （[component-model.bytecodealliance.org](https://component-model.bytecodealliance.org/language-support/building-a-simple-component/moonbit.html)）。
+- MoonBitはBytecode AllianceのWasm Component Model（言語非依存のインターフェース定義=WITから各言語バインディングを生成する標準規格）に対応した実装ページを持つ（[component-model.bytecodealliance.org](https://component-model.bytecodealliance.org/language-support/building-a-simple-component/moonbit.html)）。
 
 - 命名規則・export機構ともに**オープンソースのWasmバックエンド内で完結しており、ソースコードで検証可能**。
 

@@ -2,12 +2,8 @@
 
 native ターゲットの2つのコード生成戦略（`../research.md` 参照）にそれぞれ対応する2本のスクリプトがある。
 
-- `build-native-lib.sh` — 「新戦略」（`moon build --target native` のデフォルト、
-  Clamから直接マシンコードを生成）用。macOS ホスト上の arm64 向けのみ。
-- `build-c-backend-lib.sh` — 「Cバックエンド戦略」（`moon build --target native
-  --release`、`MOONBIT_NEW_NATIVE=0`と同義、ポータブルなC99ソースを生成）用。
-  任意のCコンパイラ（ホストcc・NDK clang・Xcode clang）を渡せるため、
-  Android・iOSクロスコンパイルはこちらを使う。
+- `build-native-lib.sh` — 「新戦略」（`moon build --target native` のデフォルト、Clamから直接マシンコードを生成）用。macOS ホスト上の arm64 向けのみ。
+- `build-c-backend-lib.sh` — 「Cバックエンド戦略」（`moon build --target native --release`、`MOONBIT_NEW_NATIVE=0`と同義、ポータブルなC99ソースを生成）用。任意のCコンパイラ（ホストcc・NDK clang・Xcode clang）を渡せるため、Android・iOSクロスコンパイルはこちらを使う。
 
 ## build-native-lib.sh
 
@@ -95,11 +91,6 @@ scripts/build-c-backend-lib.sh \
 
 ### 既知の未解決事項
 
-- `MOONBIT_USE_SIMDUTF` / `MOONBIT_ALLOW_STACKTRACE` を有効にする場合の
-  ターゲットごとの取捨選択方針は未検討（現状は常に無効＝ポータブルな
-  フォールバック実装を使う）。
-- `MOONBIT_NATIVE_NO_SYS_HEADER` はファイルシステム/乱数APIを丸ごと無効化
-  する粗い切り替えであり、実運用でどこまで必要かは未調査。
-- iOS実デバイス（Simulatorではなく）・Androidエミュレータ/実機上での実行
-  確認、複合型（文字列・構造体）マーシャリングのAndroid/iOSでの再現確認は
-  いずれも未実施（`../research.md` の残課題を参照）。
+- `MOONBIT_USE_SIMDUTF` / `MOONBIT_ALLOW_STACKTRACE` を有効にする場合のターゲットごとの取捨選択方針は未検討（現状は常に無効＝ポータブルなフォールバック実装を使う）。
+- `MOONBIT_NATIVE_NO_SYS_HEADER` はファイルシステム/乱数APIを丸ごと無効化する粗い切り替えであり、実運用でどこまで必要かは未調査。
+- iOS実デバイス（Simulatorではなく）・Androidエミュレータ/実機上での実行確認、複合型（文字列・構造体）マーシャリングのAndroid/iOSでの再現確認はいずれも未実施（`../research.md` の残課題を参照）。
