@@ -5,24 +5,6 @@
 version: 2
 
 updates:
-  # npm依存関係の更新 (TypeScript/Vite)
-  - package-ecosystem: "npm"
-    directory: "/blog-src"
-    schedule:
-      interval: "weekly"
-      day: "saturday"
-      time: "09:00"
-      timezone: "Asia/Tokyo"
-    open-pull-requests-limit: 3
-    groups:
-      development:
-        dependency-type: "development"
-      production:
-        dependency-type: "production"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-
   # GitHub Actions依存関係の更新
   - package-ecosystem: "github-actions"
     directory: "/"
